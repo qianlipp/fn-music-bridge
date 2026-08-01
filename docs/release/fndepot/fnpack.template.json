@@ -1,0 +1,23 @@
+{
+  "app": "yinqiao",
+  "name": "音桥",
+  "version": "1.0.5",
+  "summary": "为飞牛音乐提供多协议第三方音乐 App 接入，独立运行且不改动官方应用。",
+  "descriptionFile": "../STORE_LISTING.md",
+  "category": "multimedia",
+  "architecture": ["x86_64"],
+  "minimumFnosVersion": "1.2.0300",
+  "maintainer": "白告哥",
+  "homepage": "REPLACE_BEFORE_PUBLISH",
+  "repository": "REPLACE_BEFORE_PUBLISH",
+  "issues": "REPLACE_BEFORE_PUBLISH",
+  "license": "REPLACE_BEFORE_PUBLISH",
+  "package": "../../../dist/yinqiao-1.0.5.fpk",
+  "checksumFile": "../../../dist/yinqiao-1.0.5.fpk.sha256",
+  "screenshots": [
+    "PLACEHOLDER_service_overview.png",
+    "PLACEHOLDER_account_binding.png",
+    "PLACEHOLDER_protocol_capabilities.png",
+    "PLACEHOLDER_security_and_about.png"
+  ]
+}

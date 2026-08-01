@@ -1,0 +1,33 @@
+#!/bin/bash
+
+. "$(dirname "$0")/config"
+. "$(dirname "$0")/common"
+
+install_init() {
+    step_log "install_init"
+}
+
+install_callback() {
+    step_log "install_callback"
+    check_dir
+}
+
+uninstall_init() {
+    step_log "uninstall_init"
+}
+
+uninstall_callback() {
+    step_log "uninstall_callback"
+    if [ "${wizard_delete_data}" = "true" ] && [ -n "${TRIM_PKGVAR}" ] && [ -d "${TRIM_PKGVAR}" ]; then
+        rm -rf "${TRIM_PKGVAR}"
+    fi
+}
+
+upgrade_init() {
+    step_log "upgrade_init"
+}
+
+upgrade_callback() {
+    step_log "upgrade_callback"
+    check_dir
+}

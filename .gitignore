@@ -1,0 +1,15 @@
+.DS_Store
+.firecrawl/
+dist/*
+!dist/.gitkeep
+autotest/reports/*
+!autotest/reports/.gitkeep
+autotest/__pycache__/
+*.fpk
+*.sha256
+*.log
+*.key
+*.enc
+.env
+.env.*
+!.env.example

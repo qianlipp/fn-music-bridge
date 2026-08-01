@@ -1,0 +1,20 @@
+{
+  ".url": {
+    "yinqiao.main": {
+      "title": "${common.display_name}",
+      "desc": "协议状态与账号绑定",
+      "icon": "images/icon_{0}.png",
+      "protocol": "http",
+      "type": "iframe",
+      "port": "14040",
+      "url": "/yinqiao/ui/",
+      "allUsers": false,
+      "control": {
+        "accessPerm": "readonly",
+        "portPerm": "hidden",
+        "pathPerm": "hidden",
+        "fullUrlPerm": "hidden"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+[common]
+display_name="音桥"
+desc="飞牛音乐暂无官方手机端，音桥以普通应用身份提供多协议接入，连接大量兼容的第三方音乐 App。应用独立运行，不破解、不绕过鉴权，不修改系统、官方应用和数据库；服务数据仅在 NAS 本机保存和处理，除响应用户配置的播放器外，不向开发者服务器或第三方云端发送。"
+maintainer="白告哥"
+maintainer_url=""
+distributor="白告哥"
+distributor_url=""
+helpurl=""
+changelog="1.0.5：优先推荐 OpenSubsonic 与 Jellyfin，补充普通权限、本地数据和零改动安全说明。"
+
+[entry]
+title="音桥"
+desc="多协议第三方音乐 App 接入服务"

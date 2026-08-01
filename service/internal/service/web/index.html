@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#572398">
+  <link rel="icon" href="data:,">
+  <title>音桥</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="icon-overview" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="icon-account" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 6-6h2"/><circle cx="17" cy="17" r="3"/><path d="m19.2 19.2 1.8 1.8"/></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-apps" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="2"/><rect x="14" y="4" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14v7M14 17.5h7"/></symbol>
+	<symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+	<symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+	<symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M8 11v6M12 11v6M16 11v6M6 7l1 14h10l1-14"/></symbol>
+	<symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5.2-3.4 8.4-8 10-4.6-1.6-8-4.8-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <div class="settings-layout">
+      <aside class="sidebar" aria-label="管理页面导航">
+        <nav class="navigation" role="tablist" aria-label="管理页面">
+          <div class="nav-group general-navigation" role="presentation">
+            <button class="nav-item is-active" type="button" role="tab" aria-selected="true" aria-controls="view-overview" data-view-target="overview">
+              <svg aria-hidden="true"><use href="#icon-overview"></use></svg><span>服务概览</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+            <button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-account" data-view-target="account">
+              <svg aria-hidden="true"><use href="#icon-account"></use></svg><span>账号绑定</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+			<button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-settings" data-view-target="settings">
+			  <svg aria-hidden="true"><use href="#icon-settings"></use></svg><span>系统设置</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+			</button>
+			<button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-about" data-view-target="about">
+			  <svg aria-hidden="true"><use href="#icon-shield"></use></svg><span>关于与安全</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+			</button>
+          </div>
+          <div class="nav-section-label" role="presentation"><span>音乐桥接</span></div>
+          <div class="nav-group api-navigation" role="presentation">
+            <button class="nav-item api-nav" type="button" role="tab" aria-selected="false" aria-controls="view-api" data-view-target="api">
+              <span class="nav-protocol-mark api-icon" aria-hidden="true">B</span><span>API桥</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+          </div>
+          <div class="nav-section-label" role="presentation"><span>播放协议</span></div>
+          <div class="nav-group protocol-navigation" role="presentation">
+            <button class="nav-item protocol-nav" type="button" role="tab" aria-selected="false" aria-controls="view-subsonic" data-view-target="subsonic">
+              <span class="nav-protocol-mark subsonic-icon" aria-hidden="true">S</span><span class="nav-label"><span>OpenSubsonic</span><small class="nav-recommendation">优先推荐</small></span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+            <button class="nav-item protocol-nav" type="button" role="tab" aria-selected="false" aria-controls="view-jellyfin" data-view-target="jellyfin">
+              <span class="nav-protocol-mark jellyfin-icon" aria-hidden="true">J</span><span class="nav-label"><span>Jellyfin Audio</span><small class="nav-recommendation">优先推荐</small></span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+            <button class="nav-item protocol-nav" type="button" role="tab" aria-selected="false" aria-controls="view-synology" data-view-target="synology">
+              <span class="nav-protocol-mark synology-icon" aria-hidden="true">D</span><span>Audio Station</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+            <button class="nav-item protocol-nav" type="button" role="tab" aria-selected="false" aria-controls="view-ampache" data-view-target="ampache">
+              <span class="nav-protocol-mark ampache-icon" aria-hidden="true">A</span><span>Ampache</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+          </div>
+          <div class="nav-section-label" role="presentation"><span>客户端</span></div>
+          <div class="nav-group client-navigation" role="presentation">
+            <button class="nav-item" type="button" role="tab" aria-selected="false" aria-controls="view-apps" data-view-target="apps">
+              <svg aria-hidden="true"><use href="#icon-apps"></use></svg><span>三方应用支持</span><svg class="nav-arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </button>
+          </div>
+        </nav>
+		<div class="sidebar-footer"><span class="footer-dot" aria-hidden="true"></span><div><strong>协议服务</strong><span>端口 <b id="sidebarPort">14040</b></span></div></div>
+      </aside>
+
+      <main class="content-area">
+        <section class="view-section is-active" id="view-overview" role="tabpanel" aria-labelledby="overviewTitle" data-view="overview">
+          <header class="view-heading">
+            <div><span class="view-eyebrow">运行状态</span><h1 id="overviewTitle">服务概览</h1></div>
+            <div class="overview-actions">
+			  <span class="version-label" id="versionLabel">v1.0.5</span>
+              <div class="health-badge" id="healthBadge" data-state="loading"><span class="status-dot"></span><span id="healthText">正在检查</span></div>
+              <button class="icon-button" id="refreshButton" type="button" title="刷新服务状态" aria-label="刷新服务状态"><svg aria-hidden="true"><use href="#icon-refresh"></use></svg></button>
+            </div>
+          </header>
+          <div class="overview-summary glass-surface">
+            <div class="summary-mark"><span></span><span></span></div>
+            <div class="summary-copy"><span>局域网播放器地址</span><strong id="serverAddress">正在读取</strong><small>外网使用请自行配置内网穿透或反向代理</small></div>
+            <button class="icon-button copy-button" type="button" data-copy-target="serverAddress" title="复制播放器地址" aria-label="复制播放器地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button>
+          </div>
+          <div class="service-grid" aria-label="服务状态列表">
+            <article class="service-card glass-surface"><span class="service-icon api-icon" aria-hidden="true">B</span><div><strong>Yinqiao API</strong><span>飞牛音乐后台桥接</span></div><span class="row-state" id="apiState">检查中</span></article>
+            <article class="service-card glass-surface"><span class="service-icon subsonic-icon" aria-hidden="true">S</span><div><strong>OpenSubsonic</strong><span>Subsonic 客户端</span></div><span class="row-state" data-protocol-state="openSubsonic">检查中</span></article>
+            <article class="service-card glass-surface"><span class="service-icon jellyfin-icon" aria-hidden="true">J</span><div><strong>Jellyfin Audio</strong><span>Jellyfin 音乐客户端</span></div><span class="row-state" data-protocol-state="jellyfin">检查中</span></article>
+            <article class="service-card glass-surface"><span class="service-icon synology-icon" aria-hidden="true">D</span><div><strong>Audio Station</strong><span>Synology 客户端</span></div><span class="row-state" data-protocol-state="synology">检查中</span></article>
+            <article class="service-card glass-surface"><span class="service-icon ampache-icon" aria-hidden="true">A</span><div><strong>Ampache</strong><span>Ampache API 客户端</span></div><span class="row-state" data-protocol-state="ampache">检查中</span></article>
+          </div>
+        </section>
+
+        <section class="view-section" id="view-account" role="tabpanel" aria-labelledby="accountTitle" data-view="account" hidden>
+          <header class="view-heading"><div><span class="view-eyebrow">账号授权</span><h1 id="accountTitle">绑定飞牛音乐账号</h1></div><span class="binding-state" id="bindingState">未绑定</span></header>
+          <div class="account-grid">
+            <section class="account-guide glass-surface" id="setupGuide" aria-label="绑定步骤">
+              <div class="guide-heading"><span>连接步骤</span><strong>两步完成账号授权</strong></div>
+              <div class="guide-step"><span>1</span><div><strong>创建音乐账号</strong><p>在飞牛音乐中新增账号并授予曲库权限。</p></div><a class="icon-button external-button" id="openMusicLink" href="/music/settings?key=user-management" target="_blank" rel="noreferrer" title="打开飞牛音乐账号管理" aria-label="打开飞牛音乐账号管理"><svg aria-hidden="true"><use href="#icon-external"></use></svg></a></div>
+              <div class="guide-step"><span>2</span><div><strong>验证并绑定</strong><p>凭据验证成功后加密保存在本机。</p></div></div>
+            </section>
+			<section class="account-manager glass-surface" aria-label="飞牛音乐账号管理">
+			  <header class="account-manager-heading"><div><span>凭据仓库</span><strong>已绑定账号</strong><small>每个播放器都可以使用自己的飞牛音乐账号登录</small></div><button class="icon-button" id="addAccountButton" type="button" title="新增绑定账号" aria-label="新增绑定账号"><svg aria-hidden="true"><use href="#icon-plus"></use></svg></button></header>
+			  <div class="account-list" id="accountList"></div>
+			  <div class="account-empty" id="accountEmpty"><strong>还没有绑定账号</strong><span>新增一个飞牛音乐账号即可开始连接播放器。</span></div>
+			  <form class="account-form" id="enrollmentForm" novalidate>
+				<header><strong id="accountFormTitle">新增绑定</strong><button class="text-button" id="cancelAccountButton" type="button">取消</button></header>
+                <div class="field"><label for="username">用户名</label><input id="username" name="username" autocomplete="username" placeholder="飞牛音乐用户名" required></div>
+                <div class="field"><label for="password">密码</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" placeholder="飞牛音乐密码" required><button class="icon-button" id="passwordToggle" type="button" title="显示密码" aria-label="显示密码"><svg aria-hidden="true"><use href="#icon-eye"></use></svg></button></div></div>
+                <div class="form-message" id="formMessage" role="status" aria-live="polite"></div>
+                <button class="primary-button" id="submitButton" type="submit">验证并绑定</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+		<section class="view-section" id="view-settings" role="tabpanel" aria-labelledby="settingsTitle" data-view="settings" hidden>
+		  <header class="view-heading"><div><span class="view-eyebrow">应用配置</span><h1 id="settingsTitle">系统设置</h1></div><span class="settings-state" id="settingsState">已同步</span></header>
+		  <form class="settings-form" id="settingsForm">
+			<section class="settings-card glass-surface">
+			  <header><div><span>网络</span><strong>客户端连接</strong><small>管理窗口始终使用 14040，修改客户端端口不会影响 fnOS 桌面入口。</small></div></header>
+			  <div class="settings-row"><div><label for="protocolPort">客户端服务端口</label><small>OpenSubsonic、Audio Station、Jellyfin 和 Ampache 共用此端口</small></div><input class="compact-input" id="protocolPort" type="number" min="1024" max="65535" inputmode="numeric" required></div>
+			  <div class="settings-row"><div><label for="advertisedHost">局域网主机</label><small>留空时自动选择 NAS 局域网 IP，也可填写固定 IP 或主机名</small></div><input class="host-input" id="advertisedHost" type="text" placeholder="自动检测" spellcheck="false"></div>
+			  <div class="settings-note"><span>播放器地址预览</span><strong id="settingsAddressPreview">http://NAS局域网IP:14040</strong></div>
+			</section>
+			<section class="settings-card glass-surface">
+			  <header><div><span>服务</span><strong>播放协议</strong><small>关闭后对应协议入口立即停止响应，其他协议不受影响。</small></div></header>
+			  <label class="protocol-toggle-row" for="toggleSubsonic"><span class="service-icon subsonic-icon">S</span><span><strong>OpenSubsonic</strong><small>Subsonic / Navidrome 类客户端</small></span><input class="switch-input" id="toggleSubsonic" type="checkbox"><i class="switch-control" aria-hidden="true"></i></label>
+			  <label class="protocol-toggle-row" for="toggleJellyfin"><span class="service-icon jellyfin-icon">J</span><span><strong>Jellyfin Audio</strong><small>Jellyfin / Emby 音乐客户端</small></span><input class="switch-input" id="toggleJellyfin" type="checkbox"><i class="switch-control" aria-hidden="true"></i></label>
+			  <label class="protocol-toggle-row" for="toggleSynology"><span class="service-icon synology-icon">D</span><span><strong>Audio Station</strong><small>Synology DSM WebAPI 兼容客户端</small></span><input class="switch-input" id="toggleSynology" type="checkbox"><i class="switch-control" aria-hidden="true"></i></label>
+			  <label class="protocol-toggle-row" for="toggleAmpache"><span class="service-icon ampache-icon">A</span><span><strong>Ampache</strong><small>Ampache API 6 客户端</small></span><input class="switch-input" id="toggleAmpache" type="checkbox"><i class="switch-control" aria-hidden="true"></i></label>
+			</section>
+			<div class="settings-actions"><button class="secondary-button" id="resetSettingsButton" type="button">恢复默认</button><button class="primary-button save-settings-button" id="saveSettingsButton" type="submit">保存设置</button></div>
+		  </form>
+		</section>
+
+		<section class="view-section" id="view-about" role="tabpanel" aria-labelledby="aboutTitle" data-view="about" hidden>
+		  <header class="view-heading"><div><span class="view-eyebrow">透明度与责任</span><h1 id="aboutTitle">关于与安全</h1></div><span class="independent-badge">第三方独立应用</span></header>
+		  <section class="trust-summary glass-surface">
+			<div class="trust-mark" aria-hidden="true"><svg><use href="#icon-shield"></use></svg></div>
+			<div><strong>只做连接，不破解、不改变系统</strong><p>本应用仅通过飞牛音乐服务与用户已有权限进行协议转换，不包含破解、鉴权绕过、系统补丁或文件替换，不修改 fnOS、官方应用、数据库和用户曲库。</p></div>
+		  </section>
+		  <div class="trust-grid">
+			<article class="trust-card glass-surface"><span>数据范围</span><strong>数据只留在本地服务</strong><p>设置、日志、会话与凭据均保存在 NAS 本机。除响应用户配置的播放器外，不向开发者服务器或第三方云端发送数据，也不采集遥测。</p></article>
+			<article class="trust-card glass-surface"><span>账号凭据</span><strong>AES-256-GCM 本机加密</strong><p>账号密码仅用于在 NAS 内验证飞牛音乐身份；密钥、密文与设置保存在本应用私有数据目录，不对外上传。</p></article>
+			<article class="trust-card glass-surface"><span>运行权限</span><strong>仅使用普通应用身份</strong><p>协议服务以 <code>yinqiao:yinqiao</code> 运行，仅连接官方开放权限的 Socket；不使用 root 读取曲库、数据库或用户文件。</p></article>
+			<article class="trust-card glass-surface"><span>网络边界</span><strong>默认面向可信局域网</strong><p><code>18090</code> 提供 API，<code>14040</code> 提供管理页与协议；请勿直接暴露到不可信网络。</p></article>
+			<article class="trust-card glass-surface"><span>授权边界</span><strong>沿用飞牛音乐账号权限</strong><p>曲库可见范围、角色与播放授权由官方音乐账号决定，本应用不会绕过权限检查。</p></article>
+			<article class="trust-card glass-surface"><span>兼容边界</span><strong>官方升级后可能需要适配</strong><p>本项目不是官方产品。飞牛音乐接口发生变化时，部分能力可能暂时不可用。</p></article>
+		  </div>
+		  <section class="responsibility-note glass-surface"><strong>使用责任</strong><p>仅连接你拥有或已合法获授权的音乐内容，并遵守适用法律、飞牛系统及第三方客户端的服务条款。卸载时可以选择保留或删除本应用凭据、设置与日志。</p></section>
+		</section>
+
+        <section class="view-section protocol-view api-view" id="view-api" role="tabpanel" aria-labelledby="apiTitle" data-view="api" hidden>
+          <header class="view-heading protocol-heading">
+            <div class="protocol-title"><span class="service-icon api-icon" aria-hidden="true">B</span><div><span class="view-eyebrow">音乐桥接</span><h1 id="apiTitle">API桥</h1></div></div>
+            <span class="row-state protocol-state" data-api-state>检查中</span>
+          </header>
+          <div class="protocol-profile glass-surface">
+            <div class="profile-row"><span>内部基址</span><strong id="apiAddress">http://127.0.0.1:18090/yinqiao/v1</strong><button class="icon-button copy-button" type="button" data-copy-target="apiAddress" title="复制 Yinqiao API 地址" aria-label="复制 Yinqiao API 地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+            <div class="profile-row"><span>接口版本</span><code id="apiVersion">正在读取</code><em>稳定兼容层</em></div>
+            <div class="profile-row"><span>身份权限</span><strong>飞牛音乐 Bearer Token</strong><em>公开 / 用户 / 管理员 / 媒体</em></div>
+            <div class="profile-row"><span>设计用途</span><strong>为独立客户端提供稳定、分类清晰的音乐 API</strong><em>内部服务端口 18090</em></div>
+          </div>
+          <section class="api-capabilities">
+            <header class="capability-title"><div><span>API 能力</span><h2>飞牛音乐后台能力的稳定接口层</h2></div><div class="capability-counts" id="apiCounts"></div></header>
+            <div class="api-stats" id="apiStats"><div class="loading-surface glass-surface">正在读取 Yinqiao API 能力声明</div></div>
+            <div class="api-layers" id="apiLayers"></div>
+          </section>
+        </section>
+
+        <section class="view-section protocol-view" id="view-subsonic" role="tabpanel" aria-labelledby="subsonicTitle" data-view="subsonic" hidden>
+          <header class="view-heading protocol-heading"><div class="protocol-title"><span class="service-icon subsonic-icon" aria-hidden="true">S</span><div><span class="view-eyebrow">播放协议</span><h1 id="subsonicTitle">OpenSubsonic</h1></div></div><span class="row-state protocol-state" data-protocol-state="openSubsonic">检查中</span></header>
+          <div class="protocol-profile glass-surface">
+            <div class="profile-row"><span>服务器地址</span><strong id="subsonicAddress">正在读取</strong><button class="icon-button copy-button" type="button" data-copy-target="subsonicAddress" title="复制服务器地址" aria-label="复制 OpenSubsonic 地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+            <div class="profile-row"><span>协议入口</span><code>/rest</code><em>Subsonic API 1.16.1</em></div>
+			<div class="profile-row"><span>登录方式</span><strong>已绑定的飞牛音乐账号密码</strong><em>端口 <b data-protocol-port>14040</b></em></div>
+          </div>
+          <section class="protocol-capabilities" data-capability-root="openSubsonic"><header class="capability-title"><div><span>功能兼容性</span><h2>在音乐客户端中可以使用什么</h2></div><div class="capability-counts"></div></header><div class="capability-columns"><div class="loading-surface glass-surface">正在读取能力声明</div></div></section>
+        </section>
+
+        <section class="view-section protocol-view" id="view-synology" role="tabpanel" aria-labelledby="synologyTitle" data-view="synology" hidden>
+          <header class="view-heading protocol-heading"><div class="protocol-title"><span class="service-icon synology-icon" aria-hidden="true">D</span><div><span class="view-eyebrow">播放协议</span><h1 id="synologyTitle">Audio Station</h1></div></div><span class="row-state protocol-state" data-protocol-state="synology">检查中</span></header>
+          <div class="protocol-profile glass-surface">
+            <div class="profile-row"><span>服务器地址</span><strong id="synologyAddress">正在读取</strong><button class="icon-button copy-button" type="button" data-copy-target="synologyAddress" title="复制服务器地址" aria-label="复制 Audio Station 地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+            <div class="profile-row"><span>协议入口</span><code>/webapi</code><em>Synology DSM WebAPI</em></div>
+			<div class="profile-row"><span>登录方式</span><strong>飞牛音乐账号密码</strong><em>端口 <b data-protocol-port>14040</b></em></div>
+          </div>
+          <section class="protocol-capabilities" data-capability-root="synology"><header class="capability-title"><div><span>功能兼容性</span><h2>在音乐客户端中可以使用什么</h2></div><div class="capability-counts"></div></header><div class="capability-columns"><div class="loading-surface glass-surface">正在读取能力声明</div></div></section>
+        </section>
+
+        <section class="view-section protocol-view" id="view-jellyfin" role="tabpanel" aria-labelledby="jellyfinTitle" data-view="jellyfin" hidden>
+          <header class="view-heading protocol-heading"><div class="protocol-title"><span class="service-icon jellyfin-icon" aria-hidden="true">J</span><div><span class="view-eyebrow">播放协议</span><h1 id="jellyfinTitle">Jellyfin Audio</h1></div></div><span class="row-state protocol-state" data-protocol-state="jellyfin">检查中</span></header>
+          <div class="protocol-profile glass-surface">
+            <div class="profile-row"><span>服务器地址</span><strong id="jellyfinAddress">正在读取</strong><button class="icon-button copy-button" type="button" data-copy-target="jellyfinAddress" title="复制服务器地址" aria-label="复制 Jellyfin 地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+            <div class="profile-row"><span>媒体范围</span><code>Music / Audio</code><em>Jellyfin 10.10 兼容</em></div>
+            <div class="profile-row"><span>登录方式</span><strong>飞牛音乐账号密码</strong><em>原文件直连</em></div>
+          </div>
+          <section class="protocol-capabilities" data-capability-root="jellyfin"><header class="capability-title"><div><span>功能兼容性</span><h2>在音乐客户端中可以使用什么</h2></div><div class="capability-counts"></div></header><div class="capability-columns"><div class="loading-surface glass-surface">正在读取能力声明</div></div></section>
+        </section>
+
+        <section class="view-section protocol-view" id="view-ampache" role="tabpanel" aria-labelledby="ampacheTitle" data-view="ampache" hidden>
+          <header class="view-heading protocol-heading"><div class="protocol-title"><span class="service-icon ampache-icon" aria-hidden="true">A</span><div><span class="view-eyebrow">播放协议</span><h1 id="ampacheTitle">Ampache</h1></div></div><span class="row-state protocol-state" data-protocol-state="ampache">检查中</span></header>
+          <div class="protocol-profile glass-surface">
+            <div class="profile-row"><span>服务器地址</span><strong id="ampacheAddress">正在读取</strong><button class="icon-button copy-button" type="button" data-copy-target="ampacheAddress" title="复制服务器地址" aria-label="复制 Ampache 地址"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+            <div class="profile-row"><span>XML 接口</span><code>/server/xml.server.php</code><em>Ampache API 6</em></div>
+			<div class="profile-row"><span>JSON 接口</span><code>/server/json.server.php</code><em>端口 <b data-protocol-port>14040</b></em></div>
+            <div class="profile-row"><span>登录方式</span><strong>已绑定的飞牛音乐账号密码</strong><em>摘要握手</em></div>
+          </div>
+          <section class="protocol-capabilities" data-capability-root="ampache"><header class="capability-title"><div><span>功能兼容性</span><h2>在音乐客户端中可以使用什么</h2></div><div class="capability-counts"></div></header><div class="capability-columns"><div class="loading-surface glass-surface">正在读取能力声明</div></div></section>
+        </section>
+
+        <section class="view-section apps-view" id="view-apps" role="tabpanel" aria-labelledby="appsTitle" data-view="apps" hidden>
+          <header class="view-heading"><div><span class="view-eyebrow">客户端指南</span><h1 id="appsTitle">三方应用支持</h1></div><span class="version-label">15 款客户端</span></header>
+          <div class="apps-summary glass-surface">
+            <div><strong>选择适合你的播放器</strong><span>平台表示可以安装，协议表示可直接连接本服务；实际体验取决于客户端使用到的接口范围。</span></div>
+            <div class="compatibility-legend"><span><i class="compatibility-mark supported" aria-hidden="true">✓</i>支持</span><span><i class="compatibility-mark unavailable" aria-hidden="true">—</i>未提供</span></div>
+          </div>
+          <div class="app-table-shell glass-surface" role="region" aria-label="第三方音乐客户端平台与协议兼容性" tabindex="0">
+            <table class="app-compatibility-table">
+              <thead><tr><th scope="col">应用</th><th scope="col">安卓</th><th scope="col">iOS</th><th scope="col">Win</th><th scope="col">Mac</th><th scope="col">OpenSubsonic</th><th scope="col">Audio Station</th><th scope="col">Jellyfin</th><th scope="col">Ampache</th></tr></thead>
+              <tbody id="appCompatibilityRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="api-manifest.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

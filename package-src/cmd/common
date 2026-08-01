@@ -1,0 +1,28 @@
+#!/bin/bash
+
+print_log() {
+    if [ -z "${SVC_QUIET}" ]; then
+        echo "$(date +'%Y/%m/%d %H:%M:%S') $*" >&2
+    fi
+}
+
+step_log() {
+    print_log "step=$1 app=${TRIM_APPNAME} status=${TRIM_APP_STATUS}"
+}
+
+rotate_log() {
+    local log_file="$1"
+    local max_bytes=$((10 * 1024 * 1024))
+    if [ -f "${log_file}" ] && [ "$(wc -c <"${log_file}")" -gt "${max_bytes}" ]; then
+        mv -f "${log_file}" "${log_file}.1"
+    fi
+}
+
+check_dir() {
+    mkdir -p "${TRIM_PKGVAR}/log"
+    rotate_log "${API_LOG_FILE}"
+    rotate_log "${SERVICE_LOG_FILE}"
+    touch "${API_LOG_FILE}" "${SERVICE_LOG_FILE}"
+    chmod 700 "${TRIM_PKGVAR}" "${TRIM_PKGVAR}/log" 2>/dev/null || true
+    chmod 600 "${API_LOG_FILE}" "${SERVICE_LOG_FILE}" "${API_LOG_FILE}.1" "${SERVICE_LOG_FILE}.1" 2>/dev/null || true
+}

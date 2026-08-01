@@ -1,0 +1,28 @@
+#!/bin/bash
+
+. "$(dirname "$0")/config"
+. "$(dirname "$0")/common"
+. "$(dirname "$0")/service"
+
+case "$1" in
+start)
+    if status_daemon; then
+        print_log "services already running"
+        exit 0
+    fi
+    stop_daemon
+    start_daemon
+    ;;
+stop)
+    stop_daemon
+    ;;
+status)
+    if status_daemon; then
+        exit 0
+    fi
+    exit 3
+    ;;
+*)
+    exit 1
+    ;;
+esac
