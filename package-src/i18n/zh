@@ -6,7 +6,7 @@ maintainer_url=""
 distributor="白告哥"
 distributor_url=""
 helpurl=""
-changelog="1.0.5：优先推荐 OpenSubsonic 与 Jellyfin，补充普通权限、本地数据和零改动安全说明。"
+changelog="1.0.6：修复 Musiver 封面鉴权兼容，并优化专辑封面解析，避免大曲库全量扫描。"
 
 [entry]
 title="音桥"

@@ -50,6 +50,7 @@ type Server struct {
 
 	jellyfinMu       sync.RWMutex
 	jellyfinSessions map[string]authSession
+	jellyfinImages   map[string]string
 }
 
 func NewServer(config Config, logger *log.Logger) (*Server, error) {
@@ -90,6 +91,7 @@ func NewServer(config Config, logger *log.Logger) (*Server, error) {
 		ampacheSessions:  map[string]ampacheSession{},
 		synologySessions: map[string]authSession{},
 		jellyfinSessions: map[string]authSession{},
+		jellyfinImages:   map[string]string{},
 	}, nil
 }
 
@@ -1065,6 +1067,13 @@ func (s *Server) handleCoverArt(writer http.ResponseWriter, request *http.Reques
 	if coverID != "" {
 		return s.proxyBinary(writer, request, session, "/media/covers/"+url.PathEscape(coverID), query)
 	}
+	if strings.HasPrefix(strings.ToLower(id), "al-") {
+		resolved, updated := s.resolveCoverID(request.Context(), session, id)
+		if resolved != "" && resolved != id {
+			s.rememberCover(id, resolved)
+			return s.proxyBinary(writer, request, updated, "/media/covers/"+url.PathEscape(resolved), query)
+		}
+	}
 
 	directErr := s.proxyBinary(writer, request, session, "/media/covers/"+url.PathEscape(id), query)
 	if directErr == nil {
@@ -1086,18 +1095,25 @@ func (s *Server) handleCoverArt(writer http.ResponseWriter, request *http.Reques
 
 func (s *Server) resolveCoverID(ctx context.Context, session authSession, id string) (string, authSession) {
 	detailRequests := []struct {
-		endpoint string
-		query    url.Values
+		endpoint      string
+		query         url.Values
+		trackEndpoint string
+		trackKey      string
 	}{
-		{"/catalog/albums/detail", url.Values{"guid": {id}}},
-		{"/catalog/artists/detail", url.Values{"guid": {id}}},
-		{"/me/playlists/detail", url.Values{"guid": {id}}},
+		{"/catalog/albums/detail", url.Values{"guid": {id}}, "/catalog/tracks/by-album", "albumGUID"},
+		{"/catalog/artists/detail", url.Values{"guid": {id}}, "/catalog/tracks/by-artist", "artistGUID"},
+		{"/me/playlists/detail", url.Values{"guid": {id}}, "/catalog/tracks/by-playlist", "playlistGUID"},
 	}
 	for _, detail := range detailRequests {
 		data, updated, err := s.call(ctx, session, http.MethodGet, detail.endpoint, detail.query, nil)
 		if err == nil {
 			session = updated
 			if coverID := extractCoverID(object(data)); coverID != "" {
+				return coverID, session
+			}
+			coverID, next, relationErr := s.firstRelatedTrackCoverID(ctx, session, detail.trackEndpoint, detail.trackKey, id)
+			session = next
+			if relationErr == nil && coverID != "" {
 				return coverID, session
 			}
 		}
@@ -1112,6 +1128,25 @@ func (s *Server) resolveCoverID(ctx context.Context, session authSession, id str
 		}
 	}
 	return "", session
+}
+
+func (s *Server) firstRelatedTrackCoverID(ctx context.Context, session authSession, endpoint, relationKey, id string) (string, authSession, error) {
+	data, updated, err := s.call(ctx, session, http.MethodGet, endpoint, url.Values{
+		relationKey: {id}, "page": {"1"}, "size": {"1"},
+	}, nil)
+	if err != nil {
+		return "", updated, err
+	}
+	items := list(data)
+	if len(items) == 0 {
+		return "", updated, nil
+	}
+	track := object(items[0])
+	s.rememberTrack(track)
+	if coverID := extractCoverID(track); coverID != "" {
+		return coverID, updated, nil
+	}
+	return extractCoverID(firstObject(track, "album")), updated, nil
 }
 
 func (s *Server) findTrack(ctx context.Context, session authSession, id string) (map[string]any, authSession, error) {
@@ -1165,11 +1200,16 @@ func (s *Server) rememberTrack(track map[string]any) {
 	s.trackMu.Lock()
 	s.trackCache[id] = track
 	s.trackMu.Unlock()
-	if coverID := extractCoverID(track); coverID != "" {
-		s.rememberCover(id, coverID)
+	trackCoverID := extractCoverID(track)
+	if trackCoverID != "" {
+		s.rememberCover(id, trackCoverID)
 	}
 	if album := firstObject(track, "album"); album != nil {
-		if albumID, coverID := entityID(album), extractCoverID(album); albumID != "" && coverID != "" {
+		albumID, coverID := entityID(album), extractCoverID(album)
+		if coverID == "" {
+			coverID = trackCoverID
+		}
+		if albumID != "" && coverID != "" {
 			s.rememberCover(albumID, coverID)
 		}
 	}

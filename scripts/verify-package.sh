@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-FPK="${1:-${PROJECT_ROOT}/dist/yinqiao-1.0.5.fpk}"
-EXPECTED_VERSION="${2:-1.0.5}"
+FPK="${1:-${PROJECT_ROOT}/dist/yinqiao-1.0.6.fpk}"
+EXPECTED_VERSION="${2:-1.0.6}"
 WORK_DIR="$(mktemp -d /tmp/yinqiao-verify.XXXXXX)"
 
 cleanup() {

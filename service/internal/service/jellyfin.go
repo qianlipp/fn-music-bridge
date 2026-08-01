@@ -124,8 +124,17 @@ func (s *Server) handleJellyfin(writer http.ResponseWriter, request *http.Reques
 
 	session, token, err := s.jellyfinAuthenticate(request)
 	if err != nil {
-		s.writeJellyfinError(writer, http.StatusUnauthorized, "Authentication required")
-		return
+		if isJellyfinImageRequest(requestPath, request.Method) {
+			if cached, ok := s.jellyfinImageSession(jellyfinImageItemID(requestPath)); ok {
+				session = cached
+				token = ""
+				err = nil
+			}
+		}
+		if err != nil {
+			s.writeJellyfinError(writer, http.StatusUnauthorized, "Authentication required")
+			return
+		}
 	}
 	if err := s.dispatchJellyfin(writer, request, requestPath, token, session); err != nil {
 		s.logger.Printf("jellyfin method=%s path=%s user=%q error=%v", request.Method, requestPath, session.Username, err)
@@ -245,6 +254,68 @@ func (s *Server) jellyfinAuthenticate(request *http.Request) (authSession, strin
 	s.jellyfinSessions[token] = session
 	s.jellyfinMu.Unlock()
 	return session, token, nil
+}
+
+func isJellyfinImageRequest(requestPath, method string) bool {
+	if method != http.MethodGet && method != http.MethodHead {
+		return false
+	}
+	lowerPath := strings.ToLower(requestPath)
+	return strings.HasPrefix(lowerPath, "/items/") &&
+		(strings.Contains(lowerPath, "/images/") || strings.HasSuffix(lowerPath, "/primary"))
+}
+
+func (s *Server) jellyfinImageSession(id string) (authSession, bool) {
+	s.jellyfinMu.RLock()
+	username, ok := s.jellyfinImages[strings.ToLower(strings.TrimSpace(id))]
+	if ok {
+		for _, session := range s.jellyfinSessions {
+			if session.Username == username {
+				s.jellyfinMu.RUnlock()
+				return session, true
+			}
+		}
+	}
+	s.jellyfinMu.RUnlock()
+	return authSession{}, false
+}
+
+func (s *Server) rememberJellyfinImageSession(kind string, value map[string]any, session authSession) {
+	id := entityID(value)
+	if id == "" || session.Username == "" {
+		return
+	}
+	key := strings.ToLower(jellyfinID(kind, id))
+	s.jellyfinMu.Lock()
+	s.jellyfinImages[key] = session.Username
+	s.jellyfinMu.Unlock()
+}
+
+func (s *Server) jellyfinAlbumItem(value map[string]any, session authSession) map[string]any {
+	s.rememberJellyfinImageSession("album", value, session)
+	return jellyfinAlbum(value)
+}
+
+func (s *Server) jellyfinArtistItem(value map[string]any, session authSession) map[string]any {
+	s.rememberJellyfinImageSession("artist", value, session)
+	return jellyfinArtist(value)
+}
+
+func (s *Server) jellyfinPlaylistItem(value map[string]any, session authSession) map[string]any {
+	s.rememberJellyfinImageSession("playlist", value, session)
+	return jellyfinPlaylist(value)
+}
+
+func (s *Server) jellyfinTrackItem(value map[string]any, session authSession) map[string]any {
+	s.rememberTrack(value)
+	s.rememberJellyfinImageSession("track", value, session)
+	if album := firstObject(value, "album"); album != nil {
+		s.rememberJellyfinImageSession("album", album, session)
+	}
+	for _, rawArtist := range nestedList(value, "artists") {
+		s.rememberJellyfinImageSession("artist", object(rawArtist), session)
+	}
+	return jellyfinTrack(value)
 }
 
 func (s *Server) dispatchJellyfin(writer http.ResponseWriter, request *http.Request, requestPath, token string, session authSession) error {
@@ -829,7 +900,7 @@ func jellyfinTotal(data any) (int, bool) {
 
 func (s *Server) jellyfinAlbumValues(request *http.Request, session authSession, searchTerm string, start, limit int) (jellyfinResultPage, error) {
 	if searchTerm != "" {
-		return s.jellyfinSearchMapped(request, session, "/search/albums", searchTerm, start, limit, func(value map[string]any) any { return jellyfinAlbum(value) })
+		return s.jellyfinSearchMapped(request, session, "/search/albums", searchTerm, start, limit, func(value map[string]any) any { return s.jellyfinAlbumItem(value, session) })
 	}
 	endpoint := "/catalog/albums"
 	query := url.Values{}
@@ -839,16 +910,16 @@ func (s *Server) jellyfinAlbumValues(request *http.Request, session authSession,
 		query.Set("artistGUID", stripJellyfinID(artistIDs[0], "artist"))
 	}
 	addJellyfinSort(query, request.Form, "album")
-	return s.jellyfinPagedMapped(request, session, endpoint, query, start, limit, func(value map[string]any) any { return jellyfinAlbum(value) })
+	return s.jellyfinPagedMapped(request, session, endpoint, query, start, limit, func(value map[string]any) any { return s.jellyfinAlbumItem(value, session) })
 }
 
 func (s *Server) jellyfinArtistValues(request *http.Request, session authSession, searchTerm string, start, limit int) (jellyfinResultPage, error) {
 	if searchTerm != "" {
-		return s.jellyfinSearchMapped(request, session, "/search/artists", searchTerm, start, limit, func(value map[string]any) any { return jellyfinArtist(value) })
+		return s.jellyfinSearchMapped(request, session, "/search/artists", searchTerm, start, limit, func(value map[string]any) any { return s.jellyfinArtistItem(value, session) })
 	}
 	query := url.Values{}
 	addJellyfinSort(query, request.Form, "artist")
-	return s.jellyfinPagedMapped(request, session, "/catalog/artists", query, start, limit, func(value map[string]any) any { return jellyfinArtist(value) })
+	return s.jellyfinPagedMapped(request, session, "/catalog/artists", query, start, limit, func(value map[string]any) any { return s.jellyfinArtistItem(value, session) })
 }
 
 func (s *Server) jellyfinGenreValues(request *http.Request, session authSession, start, limit int) (jellyfinResultPage, error) {
@@ -856,14 +927,13 @@ func (s *Server) jellyfinGenreValues(request *http.Request, session authSession,
 }
 
 func (s *Server) jellyfinPlaylistValues(request *http.Request, session authSession, start, limit int) (jellyfinResultPage, error) {
-	return s.jellyfinPagedMapped(request, session, "/me/playlists", nil, start, limit, func(value map[string]any) any { return jellyfinPlaylist(value) })
+	return s.jellyfinPagedMapped(request, session, "/me/playlists", nil, start, limit, func(value map[string]any) any { return s.jellyfinPlaylistItem(value, session) })
 }
 
 func (s *Server) jellyfinTrackValues(request *http.Request, session authSession, parentID, searchTerm string, start, limit int) (jellyfinResultPage, error) {
 	if searchTerm != "" {
 		return s.jellyfinSearchMapped(request, session, "/search/tracks", searchTerm, start, limit, func(value map[string]any) any {
-			s.rememberTrack(value)
-			return jellyfinTrack(value)
+			return s.jellyfinTrackItem(value, session)
 		})
 	}
 	endpoint := "/catalog/tracks"
@@ -897,7 +967,7 @@ func (s *Server) jellyfinTrackValues(request *http.Request, session authSession,
 	}
 	return s.jellyfinPagedMapped(request, session, endpoint, query, start, limit, func(value map[string]any) any {
 		track := jellyfinTrackRecord(value)
-		s.rememberTrack(track)
+		s.jellyfinTrackItem(track, session)
 		return jellyfinTrackFromRecord(track, value, endpoint)
 	})
 }
@@ -913,8 +983,7 @@ func (s *Server) jellyfinRandomTrackValues(request *http.Request, session authSe
 	}
 	return s.jellyfinPagedMapped(request, session, "/catalog/tracks", nil, start, limit, func(value map[string]any) any {
 		track := jellyfinTrackRecord(value)
-		s.rememberTrack(track)
-		return jellyfinTrack(track)
+		return s.jellyfinTrackItem(track, session)
 	})
 }
 
@@ -942,7 +1011,7 @@ func (s *Server) jellyfinFavoriteRelatedValues(request *http.Request, session au
 				continue
 			}
 			seen[id] = true
-			items = append(items, jellyfinAlbum(album))
+			items = append(items, s.jellyfinAlbumItem(album, session))
 			continue
 		}
 		for _, rawArtist := range nestedList(track, "artists") {
@@ -952,7 +1021,7 @@ func (s *Server) jellyfinFavoriteRelatedValues(request *http.Request, session au
 				continue
 			}
 			seen[id] = true
-			items = append(items, jellyfinArtist(artist))
+			items = append(items, s.jellyfinArtistItem(artist, session))
 		}
 	}
 	from := min(start, len(items))
@@ -988,7 +1057,7 @@ func (s *Server) jellyfinItemDetail(writer http.ResponseWriter, request *http.Re
 		var track map[string]any
 		track, _, err = s.findTrack(request.Context(), session, raw)
 		if err == nil {
-			s.writeJellyfinJSON(writer, http.StatusOK, jellyfinTrack(track))
+			s.writeJellyfinJSON(writer, http.StatusOK, s.jellyfinTrackItem(track, session))
 			return nil
 		}
 		if kind == "track" {
@@ -1012,11 +1081,11 @@ func (s *Server) jellyfinItemDetail(writer http.ResponseWriter, request *http.Re
 	var item map[string]any
 	switch kind {
 	case "album":
-		item = jellyfinAlbum(object(data))
+		item = s.jellyfinAlbumItem(object(data), session)
 	case "artist":
-		item = jellyfinArtist(object(data))
+		item = s.jellyfinArtistItem(object(data), session)
 	case "playlist":
-		item = jellyfinPlaylist(object(data))
+		item = s.jellyfinPlaylistItem(object(data), session)
 	case "genre":
 		item = jellyfinGenre(object(data))
 	}
@@ -1030,7 +1099,6 @@ func (s *Server) jellyfinItemDetail(writer http.ResponseWriter, request *http.Re
 func (s *Server) jellyfinImage(writer http.ResponseWriter, request *http.Request, session authSession, id string) error {
 	kind, raw := splitJellyfinID(id)
 	coverID := ""
-	var data any
 	var err error
 	switch kind {
 	case "track", "":
@@ -1042,21 +1110,8 @@ func (s *Server) jellyfinImage(writer http.ResponseWriter, request *http.Request
 				coverID = extractCoverID(firstObject(track, "album"))
 			}
 		}
-	case "album":
-		data, session, err = s.call(request.Context(), session, http.MethodGet, "/catalog/albums/detail", url.Values{"guid": {raw}}, nil)
-		if err == nil {
-			coverID = extractCoverID(object(data))
-		}
-	case "artist":
-		data, session, err = s.call(request.Context(), session, http.MethodGet, "/catalog/artists/detail", url.Values{"guid": {raw}}, nil)
-		if err == nil {
-			coverID = extractCoverID(object(data))
-		}
-	case "playlist":
-		data, session, err = s.call(request.Context(), session, http.MethodGet, "/me/playlists/detail", url.Values{"guid": {raw}}, nil)
-		if err == nil {
-			coverID = extractCoverID(object(data))
-		}
+	case "album", "artist", "playlist":
+		coverID, session = s.resolveCoverID(request.Context(), session, raw)
 	}
 	if err != nil {
 		return err
@@ -1259,8 +1314,7 @@ func (s *Server) jellyfinPlaylistItems(writer http.ResponseWriter, request *http
 	case http.MethodGet:
 		start, limit := jellyfinPageParams(request.Form)
 		page, err := s.jellyfinPagedMapped(request, session, "/catalog/tracks/by-playlist", url.Values{"playlistGUID": {raw}}, start, limit, func(value map[string]any) any {
-			s.rememberTrack(value)
-			item := jellyfinTrack(value)
+			item := s.jellyfinTrackItem(value, session)
 			item["PlaylistItemId"] = item["Id"]
 			return item
 		})
@@ -1341,7 +1395,7 @@ func (s *Server) jellyfinPlaybackInfo(writer http.ResponseWriter, request *http.
 	if err != nil {
 		return err
 	}
-	item := jellyfinTrack(track)
+	item := s.jellyfinTrackItem(track, session)
 	sources, _ := item["MediaSources"].([]any)
 	s.writeJellyfinJSON(writer, http.StatusOK, map[string]any{"MediaSources": sources, "PlaySessionId": jellyfinID("play", entityID(track)), "ErrorCode": nil})
 	return nil

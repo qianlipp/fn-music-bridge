@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const yinqiaoVersion = "1.0.5"
+const yinqiaoVersion = "1.0.6"
 
 var pathVariablePattern = regexp.MustCompile(`\{([A-Za-z][A-Za-z0-9]*)\}`)
 

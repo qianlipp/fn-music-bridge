@@ -204,6 +204,16 @@ func TestSearchSongLookupAndCoverFallbacks(t *testing.T) {
 	if cover.StatusCode != http.StatusOK || cover.Header.Get("Content-Type") != "image/png" || string(coverBody) != "PNG" {
 		t.Fatalf("cover fallback status/type/body = %d/%q/%q", cover.StatusCode, cover.Header.Get("Content-Type"), coverBody)
 	}
+
+	relatedCover, err := http.Get(server.URL + "/rest/getCoverArt.view?" + auth + "&id=al-no-cover")
+	if err != nil {
+		t.Fatal(err)
+	}
+	relatedCoverBody, _ := io.ReadAll(relatedCover.Body)
+	_ = relatedCover.Body.Close()
+	if relatedCover.StatusCode != http.StatusOK || relatedCover.Header.Get("Content-Type") != "image/png" || string(relatedCoverBody) != "PNG" {
+		t.Fatalf("related-track cover fallback status/type/body = %d/%q/%q", relatedCover.StatusCode, relatedCover.Header.Get("Content-Type"), relatedCoverBody)
+	}
 }
 
 func TestSearchCapsAndFiltersSuccessfulUpstreamResults(t *testing.T) {
@@ -815,6 +825,26 @@ func TestJellyfinAudioLoginBrowseLyricsAndStreaming(t *testing.T) {
 	entries := itemPayload["Items"].([]any)
 	if len(entries) != 1 || stringValue(object(entries[0]), "Id") != "fnm-track-track-1" || object(entries[0])["Type"] != "Audio" {
 		t.Fatalf("unexpected Jellyfin items: %#v", itemPayload)
+	}
+
+	// Musiver requests primary images without forwarding the Jellyfin token.
+	// Only items seen through an authenticated metadata response may use this path.
+	image, err := http.Get(server.URL + "/Items/fnm-track-track-1/Images/Primary?tag=cover-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	imageBody, _ := io.ReadAll(image.Body)
+	_ = image.Body.Close()
+	if image.StatusCode != http.StatusOK || image.Header.Get("Content-Type") != "image/png" || string(imageBody) != "PNG" {
+		t.Fatalf("tokenless known Jellyfin image status/type/body = %d/%q/%q", image.StatusCode, image.Header.Get("Content-Type"), imageBody)
+	}
+	unknownImage, err := http.Get(server.URL + "/Items/fnm-track-not-seen/Images/Primary")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = unknownImage.Body.Close()
+	if unknownImage.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("tokenless unknown Jellyfin image status = %d", unknownImage.StatusCode)
 	}
 
 	invalidLoginRequest, _ := http.NewRequest(http.MethodPost, server.URL+"/Users/AuthenticateByName", strings.NewReader(`{`))
@@ -1464,6 +1494,10 @@ func newFakeAPI(t *testing.T) *httptest.Server {
 			writeAPIEnvelope(writer, true, map[string]any{"status": "ready", "upstream": "ready"}, "", "")
 		case "/catalog/albums/detail":
 			requireBearer(t, request)
+			if request.URL.Query().Get("guid") == "al-no-cover" {
+				writeAPIEnvelope(writer, true, map[string]any{"guid": "al-no-cover", "name": "Album Without Cover"}, "", "")
+				return
+			}
 			writeAPIEnvelope(writer, true, map[string]any{"guid": "album-1", "name": "Album One", "coverId": "cover-1", "artists": []any{map[string]any{"guid": "artist-1", "name": "Artist One"}}}, "", "")
 		case "/catalog/albums":
 			requireBearer(t, request)
@@ -1476,9 +1510,10 @@ func newFakeAPI(t *testing.T) *httptest.Server {
 			}, "", "")
 		case "/catalog/tracks/by-album", "/catalog/tracks":
 			requireBearer(t, request)
+			albumID := firstNonEmpty(request.URL.Query().Get("albumGUID"), "album-1")
 			track := map[string]any{
 				"guid": "track-1", "title": "Song One", "duration": 180000, "coverId": "cover-1",
-				"album":     map[string]any{"guid": "album-1", "name": "Album One"},
+				"album":     map[string]any{"guid": albumID, "name": "Album One"},
 				"artists":   []any{map[string]any{"guid": "artist-1", "name": "Artist One"}},
 				"audioSpec": map[string]any{"extension": "mp3", "codec": "mp3", "container": "mp3", "duration": 180000, "bitrate": 320000, "sampleRate": 44100, "channel": 2, "size": 10},
 			}
