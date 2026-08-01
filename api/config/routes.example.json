@@ -1,0 +1,10 @@
+{
+  "tracks.list": {
+    "method": "GET",
+    "path": "/track/list"
+  },
+  "auth.me": {
+    "method": "GET",
+    "path": "/user/me"
+  }
+}

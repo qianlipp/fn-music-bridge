@@ -1,0 +1,3 @@
+#!/bin/bash
+. "$(dirname "$0")/package"
+install_callback >"${TRIM_TEMP_LOGFILE}" 2>&1

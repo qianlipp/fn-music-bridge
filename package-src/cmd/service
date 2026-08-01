@@ -1,0 +1,109 @@
+#!/bin/bash
+
+process_status() {
+    local pid_file="$1"
+    local binary="$2"
+    if [ ! -r "${pid_file}" ]; then
+        return 1
+    fi
+    local process_pid
+    process_pid=$(cat "${pid_file}")
+    if [ -z "${process_pid}" ] || ! ps -p "${process_pid}" >/dev/null 2>&1; then
+        return 1
+    fi
+    [ "$(readlink -f "/proc/${process_pid}/exe")" = "${binary}" ]
+}
+
+stop_process() {
+    local name="$1"
+    local pid_file="$2"
+    local binary="$3"
+    if process_status "${pid_file}" "${binary}"; then
+        local process_pid
+        process_pid=$(cat "${pid_file}")
+        kill -TERM "${process_pid}" 2>/dev/null || true
+        local count=0
+        while ps -p "${process_pid}" >/dev/null 2>&1 && [ "${count}" -lt 15 ]; do
+            sleep 1
+            count=$((count + 1))
+        done
+        if ps -p "${process_pid}" >/dev/null 2>&1; then
+            kill -KILL "${process_pid}" 2>/dev/null || true
+        fi
+        print_log "stopped ${name} pid=${process_pid}"
+    fi
+    rm -f "${pid_file}"
+}
+
+start_api() {
+    if process_status "${API_PID_FILE}" "${API_BIN}"; then
+        return 0
+    fi
+    rm -f "${API_PID_FILE}"
+    env \
+        YINQIAO_API_LISTEN="0.0.0.0:${API_PORT}" \
+        YINQIAO_API_PREFIX="/yinqiao/v1" \
+        YINQIAO_API_ALLOWED_ORIGINS="*" \
+        YINQIAO_API_PROXY_MUSIC_ROOT="false" \
+        YINQIAO_UPSTREAM_ORIGIN="http://unix" \
+        YINQIAO_UPSTREAM_UNIX_SOCKET="${MUSIC_SOCKET}" \
+        YINQIAO_UPSTREAM_API_BASE="/music/api/v1" \
+        "${API_BIN}" >>"${API_LOG_FILE}" 2>&1 &
+    local process_pid=$!
+    printf "%s" "${process_pid}" >"${API_PID_FILE}"
+    sleep 1
+    if ! process_status "${API_PID_FILE}" "${API_BIN}"; then
+        rm -f "${API_PID_FILE}"
+        print_log "Yinqiao API failed to start on port ${API_PORT}"
+        return 1
+    fi
+    print_log "Yinqiao API started on 0.0.0.0:${API_PORT} pid=${process_pid}"
+}
+
+start_service() {
+    if process_status "${SERVICE_PID_FILE}" "${SERVICE_BIN}"; then
+        return 0
+    fi
+    rm -f "${SERVICE_PID_FILE}"
+    env \
+        YINQIAO_SERVICE_LISTEN="0.0.0.0:${SERVICE_PORT}" \
+        YINQIAO_API_URL="http://127.0.0.1:${API_PORT}/yinqiao/v1" \
+        YINQIAO_CREDENTIAL_FILE="${CREDENTIAL_FILE}" \
+        YINQIAO_CREDENTIAL_KEY_FILE="${CREDENTIAL_KEY_FILE}" \
+        YINQIAO_SETTINGS_FILE="${SETTINGS_FILE}" \
+        YINQIAO_ENABLE_SUBSONIC="${YINQIAO_ENABLE_SUBSONIC:-true}" \
+        YINQIAO_ENABLE_AMPACHE="${YINQIAO_ENABLE_AMPACHE:-true}" \
+        YINQIAO_ENABLE_SYNOLOGY="${YINQIAO_ENABLE_SYNOLOGY:-true}" \
+        YINQIAO_ENABLE_JELLYFIN="${YINQIAO_ENABLE_JELLYFIN:-true}" \
+        "${SERVICE_BIN}" >>"${SERVICE_LOG_FILE}" 2>&1 &
+    local process_pid=$!
+    printf "%s" "${process_pid}" >"${SERVICE_PID_FILE}"
+    sleep 1
+    if ! process_status "${SERVICE_PID_FILE}" "${SERVICE_BIN}"; then
+        rm -f "${SERVICE_PID_FILE}"
+        print_log "Yinqiao service failed to start on port ${SERVICE_PORT}"
+        return 1
+    fi
+    print_log "Yinqiao service started on 0.0.0.0:${SERVICE_PORT} pid=${process_pid}"
+}
+
+start_daemon() {
+    check_dir
+    if [ ! -S "${MUSIC_SOCKET}" ]; then
+        print_log "warning: official fnmusic socket is unavailable: ${MUSIC_SOCKET}; start the official music service before using Yinqiao"
+    fi
+    start_api || return 1
+    start_service || {
+        stop_process "Yinqiao API" "${API_PID_FILE}" "${API_BIN}"
+        return 1
+    }
+}
+
+stop_daemon() {
+    stop_process "Yinqiao service" "${SERVICE_PID_FILE}" "${SERVICE_BIN}"
+    stop_process "Yinqiao API" "${API_PID_FILE}" "${API_BIN}"
+}
+
+status_daemon() {
+    process_status "${API_PID_FILE}" "${API_BIN}" && process_status "${SERVICE_PID_FILE}" "${SERVICE_BIN}"
+}

@@ -1,0 +1,19 @@
+[{
+  "stepTitle": "卸载音桥",
+  "items": [{
+    "type": "radio",
+    "field": "wizard_delete_data",
+    "label": "是否删除本应用的账号凭据、设置和运行日志",
+    "options": [{
+      "label": "仅卸载应用，保留加密凭据、设置和日志",
+      "value": "false"
+    }, {
+      "label": "删除本应用的加密凭据、设置和日志",
+      "value": "true"
+    }],
+    "rules": [{
+      "required": true,
+      "message": "请选择是否保留本应用数据"
+    }]
+  }]
+}]

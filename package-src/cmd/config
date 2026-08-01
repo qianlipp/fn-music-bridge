@@ -1,0 +1,17 @@
+#!/bin/bash
+
+API_BIN="${TRIM_APPDEST}/yinqiao-api"
+API_PID_FILE="${TRIM_PKGVAR}/yinqiao-api.pid"
+API_LOG_FILE="${TRIM_PKGVAR}/log/yinqiao-api.log"
+API_PORT="${YINQIAO_API_PORT:-18090}"
+
+SERVICE_BIN="${TRIM_APPDEST}/yinqiao-service"
+SERVICE_PID_FILE="${TRIM_PKGVAR}/yinqiao-service.pid"
+SERVICE_LOG_FILE="${TRIM_PKGVAR}/log/yinqiao-service.log"
+SERVICE_PORT="${YINQIAO_SERVICE_PORT:-14040}"
+
+MUSIC_SOCKET="/var/run/trim_music.socket"
+CREDENTIAL_FILE="${TRIM_PKGVAR}/yinqiao-credentials.enc"
+CREDENTIAL_KEY_FILE="${TRIM_PKGVAR}/yinqiao-credentials.key"
+SETTINGS_FILE="${TRIM_PKGVAR}/yinqiao-settings.json"
+SVC_QUIET=

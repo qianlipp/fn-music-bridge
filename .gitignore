@@ -1,0 +1,12 @@
+.DS_Store
+.firecrawl/
+dist/*
+!dist/.gitkeep
+*.fpk
+*.sha256
+*.log
+*.key
+*.enc
+.env
+.env.*
+!.env.example
