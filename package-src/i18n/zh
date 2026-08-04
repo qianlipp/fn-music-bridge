@@ -6,7 +6,7 @@ maintainer_url=""
 distributor="白告哥"
 distributor_url=""
 helpurl=""
-changelog="1.0.6：修复 Musiver 封面鉴权兼容，并优化专辑封面解析，避免大曲库全量扫描。"
+changelog="1.0.7：支持自动探测自定义 fnOS 管理端口，并可在管理页查看和手动修正全部连接配置。"
 
 [entry]
 title="音桥"

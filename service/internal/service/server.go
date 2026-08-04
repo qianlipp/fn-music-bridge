@@ -78,6 +78,7 @@ func NewServer(config Config, logger *log.Logger) (*Server, error) {
 		client:       &http.Client{Timeout: config.RequestTimeout},
 		streamClient: streamHTTPClient(config.RequestTimeout),
 	}
+	api.setGatewayOrigin(localFnosGatewayOrigin(settings.snapshot().FnosGatewayURL))
 	return &Server{
 		config:           config,
 		api:              api,

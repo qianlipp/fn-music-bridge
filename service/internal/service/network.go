@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,9 +38,61 @@ func (s *Server) handleNetworkInfo(writer http.ResponseWriter, request *http.Req
 	if len(addresses) > 0 {
 		preferred = addresses[0]
 	}
+	gateway, gatewayErr := s.api.call(request.Context(), http.MethodGet, "/gateway/diagnostics", "", nil, nil)
+	gatewayData := object(gateway)
+	if gatewayErr != nil {
+		gatewayData = map[string]any{"status": "检测失败", "error": gatewayErr.Error(), "candidates": []any{}}
+	}
+	preferredHost := ""
+	if len(ips) > 0 {
+		preferredHost = ips[0]
+	}
+	fnosBase := fnosWebBaseURL(settings, preferredHost, stringValue(gatewayData, "selectedOrigin"))
+	accountURL := ""
+	if fnosBase != "" {
+		accountURL = strings.TrimRight(fnosBase, "/") + "/music/settings?key=user-management"
+	}
 	_ = json.NewEncoder(writer).Encode(map[string]any{
 		"ok": true, "address": preferred, "addresses": addresses, "port": port,
+		"management": map[string]any{"port": listenPort(s.config.ListenAddr), "listen": s.config.ListenAddr},
+		"apiBridge":  map[string]any{"url": s.config.APIBaseURL, "port": urlPort(s.config.APIBaseURL)},
+		"fnos": map[string]any{
+			"gateway": gatewayData, "webBaseUrl": fnosBase, "accountManagementUrl": accountURL,
+			"manualGatewayUrl": settings.FnosGatewayURL, "manualWebUrl": settings.FnosWebURL,
+		},
 	})
+}
+
+func fnosWebBaseURL(settings ServiceSettings, preferredHost, detectedGateway string) string {
+	for _, candidate := range []string{settings.FnosWebURL, settings.FnosGatewayURL, detectedGateway} {
+		parsed, err := url.Parse(strings.TrimSpace(candidate))
+		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			continue
+		}
+		hostname := strings.ToLower(parsed.Hostname())
+		if preferredHost != "" && (hostname == "127.0.0.1" || hostname == "localhost" || hostname == "::1") {
+			port := parsed.Port()
+			if port == "" {
+				if parsed.Scheme == "https" {
+					port = "443"
+				} else {
+					port = "80"
+				}
+			}
+			parsed.Host = net.JoinHostPort(preferredHost, port)
+		}
+		parsed.Path, parsed.RawQuery, parsed.Fragment = "", "", ""
+		return strings.TrimRight(parsed.String(), "/")
+	}
+	return ""
+}
+
+func urlPort(value string) string {
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return ""
+	}
+	return parsed.Port()
 }
 
 func listenPort(address string) string {

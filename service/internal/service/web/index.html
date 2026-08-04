@@ -79,7 +79,7 @@
           <header class="view-heading">
             <div><span class="view-eyebrow">运行状态</span><h1 id="overviewTitle">服务概览</h1></div>
             <div class="overview-actions">
-			  <span class="version-label" id="versionLabel">v1.0.6</span>
+			  <span class="version-label" id="versionLabel">v1.0.7</span>
               <div class="health-badge" id="healthBadge" data-state="loading"><span class="status-dot"></span><span id="healthText">正在检查</span></div>
               <button class="icon-button" id="refreshButton" type="button" title="刷新服务状态" aria-label="刷新服务状态"><svg aria-hidden="true"><use href="#icon-refresh"></use></svg></button>
             </div>
@@ -103,7 +103,7 @@
           <div class="account-grid">
             <section class="account-guide glass-surface" id="setupGuide" aria-label="绑定步骤">
               <div class="guide-heading"><span>连接步骤</span><strong>两步完成账号授权</strong></div>
-              <div class="guide-step"><span>1</span><div><strong>创建音乐账号</strong><p>在飞牛音乐中新增账号并授予曲库权限。</p></div><a class="icon-button external-button" id="openMusicLink" href="/music/settings?key=user-management" target="_blank" rel="noreferrer" title="打开飞牛音乐账号管理" aria-label="打开飞牛音乐账号管理"><svg aria-hidden="true"><use href="#icon-external"></use></svg></a></div>
+			  <div class="guide-step"><span>1</span><div><strong>创建音乐账号</strong><p>在飞牛音乐中新增账号并授予曲库权限。</p></div><a class="icon-button external-button" id="openMusicLink" href="#settings" title="打开飞牛音乐账号管理" aria-label="打开飞牛音乐账号管理"><svg aria-hidden="true"><use href="#icon-external"></use></svg></a></div>
               <div class="guide-step"><span>2</span><div><strong>验证并绑定</strong><p>凭据验证成功后加密保存在本机。</p></div></div>
             </section>
 			<section class="account-manager glass-surface" aria-label="飞牛音乐账号管理">
@@ -129,6 +129,22 @@
 			  <div class="settings-row"><div><label for="protocolPort">客户端服务端口</label><small>OpenSubsonic、Audio Station、Jellyfin 和 Ampache 共用此端口</small></div><input class="compact-input" id="protocolPort" type="number" min="1024" max="65535" inputmode="numeric" required></div>
 			  <div class="settings-row"><div><label for="advertisedHost">局域网主机</label><small>留空时自动选择 NAS 局域网 IP，也可填写固定 IP 或主机名</small></div><input class="host-input" id="advertisedHost" type="text" placeholder="自动检测" spellcheck="false"></div>
 			  <div class="settings-note"><span>播放器地址预览</span><strong id="settingsAddressPreview">http://NAS局域网IP:14040</strong></div>
+			</section>
+			<section class="settings-card connection-settings glass-surface">
+			  <header class="diagnostics-heading"><div><span>连接诊断</span><strong>fnOS 与飞牛音乐</strong><small>自动识别本机管理端口、API、音乐 Socket 和账号管理页面；仅在识别错误时填写手动配置。</small></div><button class="icon-button" id="detectGatewayButton" type="button" title="重新检测" aria-label="重新检测 fnOS 配置"><svg aria-hidden="true"><use href="#icon-refresh"></use></svg></button></header>
+			  <div class="fnos-config-grid">
+				<div class="settings-row"><div><label for="fnosGatewayUrl">本机 fnOS 网关</label><small>用于账号登录。留空自动探测；填写示例：http://192.168.1.11:14100</small></div><input class="gateway-input" id="fnosGatewayUrl" type="url" placeholder="自动探测" spellcheck="false"></div>
+				<div class="settings-row"><div><label for="fnosWebUrl">浏览器访问地址</label><small>用于“创建音乐账号”跳转，可填写局域网地址或你自己的反向代理地址</small></div><input class="gateway-input" id="fnosWebUrl" type="url" placeholder="跟随自动探测" spellcheck="false"></div>
+			  </div>
+			  <div class="diagnostic-grid" aria-label="检测到的服务配置">
+				<div class="diagnostic-item"><span>客户端协议</span><strong id="diagnosticProtocol">检测中</strong><small>播放器连接</small></div>
+				<div class="diagnostic-item"><span>管理面板</span><strong id="diagnosticManagement">检测中</strong><small>fnOS 桌面窗口</small></div>
+				<div class="diagnostic-item"><span>Yinqiao API</span><strong id="diagnosticAPI">检测中</strong><small>内部桥接服务</small></div>
+				<div class="diagnostic-item"><span>音乐 Socket</span><strong id="diagnosticSocket">检测中</strong><small id="diagnosticSocketDetail">后台数据通道</small></div>
+				<div class="diagnostic-item"><span>fnOS 网关</span><strong id="diagnosticGateway">检测中</strong><small>账号鉴权入口</small></div>
+				<div class="diagnostic-item"><span>账号管理</span><strong id="diagnosticAccount">检测中</strong><small>飞牛音乐设置页</small></div>
+			  </div>
+			  <div class="gateway-candidates" id="gatewayCandidates" aria-live="polite"><span class="gateway-empty">正在扫描本机端口</span></div>
 			</section>
 			<section class="settings-card glass-surface">
 			  <header><div><span>服务</span><strong>播放协议</strong><small>关闭后对应协议入口立即停止响应，其他协议不受影响。</small></div></header>

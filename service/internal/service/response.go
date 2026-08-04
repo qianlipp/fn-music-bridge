@@ -13,7 +13,7 @@ import (
 const (
 	protocolVersion = "1.16.1"
 	serverType      = "yinqiao"
-	serverVersion   = "1.0.6"
+	serverVersion   = "1.0.7"
 )
 
 type node struct {

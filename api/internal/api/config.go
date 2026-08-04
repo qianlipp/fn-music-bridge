@@ -38,7 +38,7 @@ func ConfigFromEnv() Config {
 		UpstreamOrigin:     strings.TrimRight(envString("YINQIAO_UPSTREAM_ORIGIN", "http://unix"), "/"),
 		UpstreamAPIBase:    normalizePrefix(envString("YINQIAO_UPSTREAM_API_BASE", "/music/api/v1")),
 		UpstreamUnixSocket: envString("YINQIAO_UPSTREAM_UNIX_SOCKET", "/var/run/trim_music.socket"),
-		UpstreamGateways:   splitCSV(envString("YINQIAO_UPSTREAM_GATEWAYS", "http://127.0.0.1:5666,http://127.0.0.1:8000")),
+		UpstreamGateways:   splitCSV(envString("YINQIAO_UPSTREAM_GATEWAYS", "http://127.0.0.1:5666,https://127.0.0.1:5667,http://127.0.0.1:8000,https://127.0.0.1:8001")),
 		UpstreamRouteMap:   strings.TrimSpace(os.Getenv("YINQIAO_UPSTREAM_ROUTE_MAP")),
 		SigningPrefix:      envString("YINQIAO_UPSTREAM_SIGNING_PREFIX", defaultSigningPrefix),
 		ClientKey:          envString("YINQIAO_UPSTREAM_CLIENT_KEY", defaultClientKey),

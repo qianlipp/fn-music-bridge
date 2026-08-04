@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const yinqiaoVersion = "1.0.6"
+const yinqiaoVersion = "1.0.7"
 
 var pathVariablePattern = regexp.MustCompile(`\{([A-Za-z][A-Za-z0-9]*)\}`)
 
@@ -61,6 +61,7 @@ func (s *Server) buildHandler() http.Handler {
 	mux.HandleFunc("GET "+prefix+"/health", s.handleHealth)
 	mux.HandleFunc("GET "+prefix+"/ready", s.handleReady)
 	mux.HandleFunc("GET "+prefix+"/capabilities", s.handleCapabilities)
+	mux.HandleFunc("GET "+prefix+"/gateway/diagnostics", s.handleGatewayDiagnostics)
 	mux.HandleFunc(prefix+"/upstream/", s.handleUpstreamPassthrough)
 	for _, route := range s.routes {
 		route := route
@@ -86,6 +87,16 @@ func (s *Server) buildHandler() http.Handler {
 	}
 
 	return s.apiMiddleware(mux)
+}
+
+func (s *Server) handleGatewayDiagnostics(writer http.ResponseWriter, request *http.Request) {
+	ctx, cancel := context.WithTimeout(request.Context(), 12*time.Second)
+	defer cancel()
+	report := s.upstream.GatewayDiagnostics(ctx, request.Header.Get(fnosGatewayHeader))
+	writeJSON(writer, http.StatusOK, map[string]any{
+		"ok": true, "data": report,
+		"meta": responseMeta{RequestID: requestID(request), Adapter: "yinqiao-v1"},
+	})
 }
 
 func (s *Server) handleUpstreamPassthrough(writer http.ResponseWriter, request *http.Request) {

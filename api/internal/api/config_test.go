@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 )
 
@@ -37,7 +38,8 @@ func TestPackagedLANDefaults(t *testing.T) {
 	if config.UpstreamUnixSocket != "/var/run/trim_music.socket" {
 		t.Fatalf("UpstreamUnixSocket = %q", config.UpstreamUnixSocket)
 	}
-	if len(config.UpstreamGateways) != 2 || config.UpstreamGateways[0] != "http://127.0.0.1:5666" || config.UpstreamGateways[1] != "http://127.0.0.1:8000" {
+	wantGateways := []string{"http://127.0.0.1:5666", "https://127.0.0.1:5667", "http://127.0.0.1:8000", "https://127.0.0.1:8001"}
+	if !slices.Equal(config.UpstreamGateways, wantGateways) {
 		t.Fatalf("UpstreamGateways = %#v", config.UpstreamGateways)
 	}
 	if config.APIKey != "" {

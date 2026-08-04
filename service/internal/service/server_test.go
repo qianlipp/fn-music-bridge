@@ -470,7 +470,7 @@ func TestSettingsPersistAndControlProtocols(t *testing.T) {
 	server := httptest.NewServer(handler.Handler())
 	defer server.Close()
 
-	request, _ := http.NewRequest(http.MethodPut, server.URL+"/yinqiao/settings", strings.NewReader(`{"protocolPort":15050,"advertisedHost":"music-nas.local","protocols":{"openSubsonic":false,"synology":true,"jellyfin":false,"ampache":true}}`))
+	request, _ := http.NewRequest(http.MethodPut, server.URL+"/yinqiao/settings", strings.NewReader(`{"protocolPort":15050,"advertisedHost":"music-nas.local","fnosGatewayUrl":"http://192.168.1.11:14100","fnosWebUrl":"https://nas.example.test:14101","protocols":{"openSubsonic":false,"synology":true,"jellyfin":false,"ampache":true}}`))
 	request.Header.Set("Content-Type", "application/json")
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -500,7 +500,7 @@ func TestSettingsPersistAndControlProtocols(t *testing.T) {
 		t.Fatal(err)
 	}
 	stored := reloaded.snapshot()
-	if stored.ProtocolPort != 15050 || stored.AdvertisedHost != "music-nas.local" || stored.Protocols.OpenSubsonic || stored.Protocols.Jellyfin {
+	if stored.ProtocolPort != 15050 || stored.AdvertisedHost != "music-nas.local" || stored.FnosGatewayURL != "http://192.168.1.11:14100" || stored.FnosWebURL != "https://nas.example.test:14101" || stored.Protocols.OpenSubsonic || stored.Protocols.Jellyfin {
 		t.Fatalf("settings were not persisted: %#v", stored)
 	}
 }
@@ -549,8 +549,27 @@ func TestNetworkInfo(t *testing.T) {
 	if response.StatusCode != http.StatusOK || payload["ok"] != true || payload["port"] != "0" {
 		t.Fatalf("unexpected network info: status=%d payload=%#v", response.StatusCode, payload)
 	}
+	fnos := object(payload["fnos"])
+	gateway := object(fnos["gateway"])
+	if gateway["selectedOrigin"] != "http://127.0.0.1:14100" || !strings.Contains(stringValue(fnos, "accountManagementUrl"), ":14100/music/settings?key=user-management") {
+		t.Fatalf("fnOS discovery missing from network info: %#v", fnos)
+	}
 	if listenPort("0.0.0.0:14040") != "14040" {
 		t.Fatal("production protocol port was not parsed correctly")
+	}
+}
+
+func TestFnosGatewayOverrideUsesLoopbackAndWebURLUsesLANHost(t *testing.T) {
+	if got := localFnosGatewayOrigin("https://192.168.1.11:14101"); got != "https://127.0.0.1:14101" {
+		t.Fatalf("local gateway = %q", got)
+	}
+	settings := ServiceSettings{ProtocolPort: 14040, FnosGatewayURL: "http://192.168.1.11:14100"}
+	if got := fnosWebBaseURL(settings, "192.168.1.11", ""); got != "http://192.168.1.11:14100" {
+		t.Fatalf("manual web base = %q", got)
+	}
+	settings.FnosWebURL = "https://music.example.test:14101"
+	if got := fnosWebBaseURL(settings, "192.168.1.11", "http://127.0.0.1:5666"); got != settings.FnosWebURL {
+		t.Fatalf("web override = %q", got)
 	}
 }
 
@@ -580,6 +599,16 @@ func TestDashboardAssets(t *testing.T) {
 	manifestBody, _ := io.ReadAll(manifest.Body)
 	if manifest.StatusCode != http.StatusOK || strings.Count(string(manifestBody), `"id":`) != 85 {
 		t.Fatalf("dashboard API manifest is incomplete: status=%d routes=%d", manifest.StatusCode, strings.Count(string(manifestBody), `"id":`))
+	}
+
+	app, err := http.Get(server.URL + "/yinqiao/ui/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Body.Close()
+	appBody, _ := io.ReadAll(app.Body)
+	if app.StatusCode != http.StatusOK || !strings.Contains(string(appBody), "fnosGatewayUrl") || strings.Contains(string(appBody), "document.referrer") {
+		t.Fatalf("dashboard fnOS configuration logic is incomplete")
 	}
 }
 
@@ -1461,6 +1490,12 @@ func newFakeAPI(t *testing.T) *httptest.Server {
 		switch request.URL.Path {
 		case "/":
 			writeAPIEnvelope(writer, true, map[string]any{"name": "yinqiao-api", "version": "1.0.4", "apiVersion": "v1", "prefix": "/yinqiao/v1", "capabilityCount": 2}, "", "")
+		case "/gateway/diagnostics":
+			writeAPIEnvelope(writer, true, map[string]any{
+				"selectedOrigin": "http://127.0.0.1:14100",
+				"candidates":     []any{map[string]any{"origin": "http://127.0.0.1:14100", "scheme": "http", "port": 14100, "source": "本机监听端口", "available": true, "selected": true, "status": "可用"}},
+				"socketPath":     "/var/run/trim_music.socket", "socketReady": true, "socketMode": "rw-rw-rw-",
+			}, "", "")
 		case "/capabilities":
 			writeAPIEnvelope(writer, true, map[string]any{
 				"count": 2,

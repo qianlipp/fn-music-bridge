@@ -29,6 +29,8 @@ const elements = {
 	settingsForm: document.querySelector("#settingsForm"),
 	protocolPort: document.querySelector("#protocolPort"),
 	advertisedHost: document.querySelector("#advertisedHost"),
+	fnosGatewayUrl: document.querySelector("#fnosGatewayUrl"),
+	fnosWebUrl: document.querySelector("#fnosWebUrl"),
 	toggleSubsonic: document.querySelector("#toggleSubsonic"),
 	toggleSynology: document.querySelector("#toggleSynology"),
 	toggleJellyfin: document.querySelector("#toggleJellyfin"),
@@ -38,6 +40,15 @@ const elements = {
 	sidebarPort: document.querySelector("#sidebarPort"),
 	saveSettingsButton: document.querySelector("#saveSettingsButton"),
 	resetSettingsButton: document.querySelector("#resetSettingsButton"),
+	detectGatewayButton: document.querySelector("#detectGatewayButton"),
+	diagnosticProtocol: document.querySelector("#diagnosticProtocol"),
+	diagnosticManagement: document.querySelector("#diagnosticManagement"),
+	diagnosticAPI: document.querySelector("#diagnosticAPI"),
+	diagnosticSocket: document.querySelector("#diagnosticSocket"),
+	diagnosticSocketDetail: document.querySelector("#diagnosticSocketDetail"),
+	diagnosticGateway: document.querySelector("#diagnosticGateway"),
+	diagnosticAccount: document.querySelector("#diagnosticAccount"),
+	gatewayCandidates: document.querySelector("#gatewayCandidates"),
   apiVersion: document.querySelector("#apiVersion"),
   apiCounts: document.querySelector("#apiCounts"),
   apiStats: document.querySelector("#apiStats"),
@@ -177,6 +188,8 @@ let accountFormOpen = false;
 let currentBoundUsers = [];
 let detectedNetworkAddress = "";
 let detectedNetworkHost = "";
+let detectedFnosBaseURL = "";
+let detectedAccountManagementURL = "";
 let toastTimer;
 let viewAnimation;
 let illuminatedSurface;
@@ -202,22 +215,91 @@ function setPlayerAddress(address, detected = false) {
 async function loadNetworkAddress() {
   const response = await fetch(endpoints.network, { headers: { Accept: "application/json" }, cache: "no-store" });
   const payload = await readJSON(response);
-  if (!response.ok || !payload.ok || !payload.address) throw new Error("未检测到 NAS 局域网地址");
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "无法读取 NAS 网络配置");
+	renderNetworkDiagnostics(payload);
+	if (!payload.address) throw new Error("未检测到 NAS 局域网地址");
 	setPlayerAddress(payload.address, true);
 }
 
 setPlayerAddress("http://NAS局域网IP:14040");
 
+function setDiagnosticValue(element, value, ready = true) {
+	element.textContent = value || "未检测到";
+	element.title = value || "未检测到";
+	element.classList.toggle("is-ready", ready && Boolean(value));
+	element.classList.toggle("is-error", !ready || !value);
+}
+
+function renderGatewayCandidates(candidates = []) {
+	elements.gatewayCandidates.replaceChildren();
+	if (!candidates.length) {
+		const empty = document.createElement("span");
+		empty.className = "gateway-empty";
+		empty.textContent = "没有发现可验证的 fnOS Web 网关；请在上方手动填写管理地址。";
+		elements.gatewayCandidates.append(empty);
+		return;
+	}
+	for (const candidate of candidates) {
+		const item = document.createElement("span");
+		item.className = `gateway-candidate${candidate.available ? " is-ready" : ""}${candidate.selected ? " is-selected" : ""}`;
+		item.title = `${candidate.source || "候选端口"} · ${candidate.status || (candidate.available ? "可用" : "不可用")}`;
+		const origin = document.createElement("code");
+		origin.textContent = candidate.origin || `${candidate.scheme || "http"}://127.0.0.1:${candidate.port || "?"}`;
+		const state = document.createElement("em");
+		state.textContent = candidate.selected ? "当前使用" : (candidate.status || "未知");
+		item.append(origin, state);
+		elements.gatewayCandidates.append(item);
+	}
+}
+
+function renderNetworkDiagnostics(payload) {
+	const gateway = payload.fnos?.gateway || {};
+	detectedFnosBaseURL = payload.fnos?.webBaseUrl || "";
+	detectedAccountManagementURL = payload.fnos?.accountManagementUrl || "";
+	setDiagnosticValue(elements.diagnosticProtocol, payload.address || "未检测到", Boolean(payload.address));
+	setDiagnosticValue(elements.diagnosticManagement, payload.management?.listen || (payload.management?.port ? `端口 ${payload.management.port}` : "未检测到"), Boolean(payload.management?.port));
+	setDiagnosticValue(elements.diagnosticAPI, payload.apiBridge?.url || "未检测到", Boolean(payload.apiBridge?.url));
+	setDiagnosticValue(elements.diagnosticSocket, gateway.socketReady ? "已连接" : "未连接", Boolean(gateway.socketReady));
+	elements.diagnosticSocketDetail.textContent = gateway.socketPath
+		? `${gateway.socketPath}${gateway.socketMode ? ` · ${gateway.socketMode}` : ""}`
+		: "后台数据通道";
+	setDiagnosticValue(elements.diagnosticGateway, gateway.selectedOrigin || "未检测到", Boolean(gateway.selectedOrigin));
+	setDiagnosticValue(elements.diagnosticAccount, detectedAccountManagementURL || "待配置", Boolean(detectedAccountManagementURL));
+	renderGatewayCandidates(Array.isArray(gateway.candidates) ? gateway.candidates : []);
+	configureMusicLink();
+}
+
+function accountManagementURLFromForm() {
+	for (const candidate of [elements.fnosWebUrl?.value.trim(), elements.fnosGatewayUrl?.value.trim(), detectedFnosBaseURL]) {
+		if (!candidate) continue;
+		try {
+			const parsed = new URL(candidate);
+			if (!['http:', 'https:'].includes(parsed.protocol)) continue;
+			if (["127.0.0.1", "localhost", "::1"].includes(parsed.hostname) && detectedNetworkHost) parsed.hostname = detectedNetworkHost;
+			parsed.pathname = "/music/settings";
+			parsed.search = "?key=user-management";
+			parsed.hash = "";
+			return parsed.href;
+		} catch (_) {
+			// Keep looking for another valid address.
+		}
+	}
+	return detectedAccountManagementURL;
+}
+
 function configureMusicLink() {
-  try {
-    if (document.referrer) {
-      elements.openMusicLink.href = new URL("/music/settings?key=user-management", document.referrer).href;
-      return;
-    }
-  } catch (_) {
-    // Some fnOS configurations hide the desktop referrer.
-  }
-  elements.openMusicLink.href = "/music/settings?key=user-management";
+	const target = accountManagementURLFromForm();
+	if (target) {
+		elements.openMusicLink.href = target;
+		elements.openMusicLink.target = "_blank";
+		elements.openMusicLink.rel = "noreferrer";
+		elements.openMusicLink.title = `打开飞牛音乐账号管理：${target}`;
+		return;
+	}
+	elements.openMusicLink.href = "#settings";
+	elements.openMusicLink.removeAttribute("target");
+	elements.openMusicLink.removeAttribute("rel");
+	elements.openMusicLink.title = "未检测到 fnOS 地址，前往系统设置手动填写";
 }
 
 function activateView(name, updateHash = true) {
@@ -383,6 +465,8 @@ function settingsPayloadFromForm() {
 	return {
 		protocolPort: Number(elements.protocolPort.value),
 		advertisedHost: elements.advertisedHost.value.trim(),
+		fnosGatewayUrl: elements.fnosGatewayUrl.value.trim(),
+		fnosWebUrl: elements.fnosWebUrl.value.trim(),
 		protocols: {
 			openSubsonic: elements.toggleSubsonic.checked,
 			synology: elements.toggleSynology.checked,
@@ -395,6 +479,8 @@ function settingsPayloadFromForm() {
 function renderSettings(settings) {
 	elements.protocolPort.value = settings.protocolPort;
 	elements.advertisedHost.value = settings.advertisedHost || "";
+	elements.fnosGatewayUrl.value = settings.fnosGatewayUrl || "";
+	elements.fnosWebUrl.value = settings.fnosWebUrl || "";
 	elements.toggleSubsonic.checked = Boolean(settings.protocols?.openSubsonic);
 	elements.toggleSynology.checked = Boolean(settings.protocols?.synology);
 	elements.toggleJellyfin.checked = Boolean(settings.protocols?.jellyfin);
@@ -408,6 +494,7 @@ function renderSettings(settings) {
 	elements.settingsState.textContent = "已同步";
 	elements.settingsState.classList.remove("dirty", "error");
 	updateSettingsPreview();
+	configureMusicLink();
 }
 
 function updateSettingsPreview() {
@@ -433,6 +520,7 @@ function markSettingsDirty() {
 	elements.settingsState.classList.add("dirty");
 	elements.settingsState.classList.remove("error");
 	updateSettingsPreview();
+	configureMusicLink();
 }
 
 async function loadSettings() {
@@ -869,9 +957,10 @@ elements.form.addEventListener("submit", async (event) => {
     if (!response.ok || !payload.ok) {
       const messages = {
         INVALID_CREDENTIALS: "用户名或密码不正确，请确认该账号可以正常登录飞牛音乐。",
-        UPSTREAM_120001: "飞牛音乐登录状态无效，请重新确认账号权限。",
+        UPSTREAM_120001: "飞牛音乐登录请求未建立有效会话，请在系统设置中重新检测 fnOS 网关。",
         UPSTREAM_120002: "用户名或密码不正确。",
         UPSTREAM_120003: "账号暂时被限制，请稍后再试。",
+		FNOS_GATEWAY_NOT_FOUND: "未找到可用的 fnOS Web 网关，请在系统设置中填写 fnOS 管理地址。",
         API_UNAVAILABLE: "无法连接本机 Yinqiao API，请检查应用运行状态。",
         CREDENTIAL_STORE_ERROR: "账号验证成功，但加密保存失败，请查看服务日志。",
       };
@@ -899,6 +988,28 @@ elements.passwordToggle.addEventListener("click", () => {
 
 elements.refreshButton.addEventListener("click", loadStatus);
 
+elements.detectGatewayButton.addEventListener("click", async () => {
+	elements.detectGatewayButton.disabled = true;
+	elements.detectGatewayButton.classList.add("is-spinning");
+	setDiagnosticValue(elements.diagnosticGateway, "正在扫描", true);
+	try {
+		await loadNetworkAddress();
+		showToast("本机服务配置已重新检测");
+	} catch (error) {
+		showToast(error.message || "自动检测失败，请手动填写 fnOS 网关", "error");
+	} finally {
+		elements.detectGatewayButton.disabled = false;
+		elements.detectGatewayButton.classList.remove("is-spinning");
+	}
+});
+
+elements.openMusicLink.addEventListener("click", (event) => {
+	if (elements.openMusicLink.getAttribute("href") !== "#settings") return;
+	event.preventDefault();
+	activateView("settings");
+	showToast("请填写 fnOS 管理地址后保存", "error");
+});
+
 elements.addAccountButton.addEventListener("click", () => {
 	accountFormOpen = true;
 	renderAccounts(currentBoundUsers);
@@ -920,6 +1031,8 @@ elements.settingsForm.addEventListener("change", markSettingsDirty);
 elements.resetSettingsButton.addEventListener("click", () => {
 	elements.protocolPort.value = 14040;
 	elements.advertisedHost.value = "";
+	elements.fnosGatewayUrl.value = "";
+	elements.fnosWebUrl.value = "";
 	elements.toggleSubsonic.checked = true;
 	elements.toggleSynology.checked = true;
 	elements.toggleJellyfin.checked = true;

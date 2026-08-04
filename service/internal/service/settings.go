@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,8 @@ type ProtocolSettings struct {
 type ServiceSettings struct {
 	ProtocolPort   int              `json:"protocolPort"`
 	AdvertisedHost string           `json:"advertisedHost"`
+	FnosGatewayURL string           `json:"fnosGatewayUrl"`
+	FnosWebURL     string           `json:"fnosWebUrl"`
 	Protocols      ProtocolSettings `json:"protocols"`
 }
 
@@ -39,6 +42,8 @@ type settingsStore struct {
 type settingsPatch struct {
 	ProtocolPort   *int                   `json:"protocolPort"`
 	AdvertisedHost *string                `json:"advertisedHost"`
+	FnosGatewayURL *string                `json:"fnosGatewayUrl"`
+	FnosWebURL     *string                `json:"fnosWebUrl"`
 	Protocols      *protocolSettingsPatch `json:"protocols"`
 }
 
@@ -180,6 +185,7 @@ func (s *Server) updateSettings(writer http.ResponseWriter, request *http.Reques
 		writeSettingsError(writer, http.StatusInternalServerError, "SETTINGS_STORE_ERROR", "设置无法保存到本机")
 		return
 	}
+	s.api.setGatewayOrigin(localFnosGatewayOrigin(next.FnosGatewayURL))
 	s.writeSettings(writer)
 }
 
@@ -189,6 +195,12 @@ func mergeSettingsPatch(value ServiceSettings, patch settingsPatch) ServiceSetti
 	}
 	if patch.AdvertisedHost != nil {
 		value.AdvertisedHost = strings.TrimSpace(*patch.AdvertisedHost)
+	}
+	if patch.FnosGatewayURL != nil {
+		value.FnosGatewayURL = strings.TrimSpace(*patch.FnosGatewayURL)
+	}
+	if patch.FnosWebURL != nil {
+		value.FnosWebURL = strings.TrimRight(strings.TrimSpace(*patch.FnosWebURL), "/")
 	}
 	if patch.Protocols != nil {
 		if patch.Protocols.OpenSubsonic != nil {
@@ -215,18 +227,59 @@ func validateServiceSettings(value ServiceSettings) error {
 		return errors.New("18090 已由内部 Yinqiao API 使用，请选择其他端口")
 	}
 	host := strings.TrimSpace(value.AdvertisedHost)
-	if host == "" || net.ParseIP(host) != nil {
+	if host != "" && net.ParseIP(host) == nil {
+		if strings.ContainsAny(host, "/:\\ ") || !hostnamePattern.MatchString(host) || strings.Contains(host, "..") {
+			return errors.New("局域网主机只能填写 IP 地址或主机名，不要包含协议、端口或路径")
+		}
+		for _, label := range strings.Split(host, ".") {
+			if len(label) == 0 || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+				return errors.New("局域网主机名格式不正确")
+			}
+		}
+	}
+	if err := validateFnosURL(value.FnosGatewayURL, "本机 fnOS 网关"); err != nil {
+		return err
+	}
+	if err := validateFnosURL(value.FnosWebURL, "飞牛访问地址"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateFnosURL(value, label string) error {
+	if strings.TrimSpace(value) == "" {
 		return nil
 	}
-	if strings.ContainsAny(host, "/:\\ ") || !hostnamePattern.MatchString(host) || strings.Contains(host, "..") {
-		return errors.New("局域网主机只能填写 IP 地址或主机名，不要包含协议、端口或路径")
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil {
+		return fmt.Errorf("%s必须是完整的 HTTP 或 HTTPS 地址", label)
 	}
-	for _, label := range strings.Split(host, ".") {
-		if len(label) == 0 || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
-			return errors.New("局域网主机名格式不正确")
+	if parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+		return fmt.Errorf("%s不要包含路径、参数或账号信息", label)
+	}
+	if port := parsed.Port(); port != "" {
+		value, parseErr := strconv.Atoi(port)
+		if parseErr != nil || value < 1 || value > 65535 {
+			return fmt.Errorf("%s端口无效", label)
 		}
 	}
 	return nil
+}
+
+func localFnosGatewayOrigin(value string) string {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return ""
+	}
+	port := parsed.Port()
+	if port == "" {
+		if parsed.Scheme == "https" {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+	return parsed.Scheme + "://" + net.JoinHostPort("127.0.0.1", port)
 }
 
 func writeSettingsError(writer http.ResponseWriter, status int, code, message string) {

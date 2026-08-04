@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -84,6 +86,91 @@ func TestNonLoginRouteKeepsDirectUpstream(t *testing.T) {
 	if directCalls != 1 || gatewayCalls != 0 {
 		t.Fatalf("direct/gateway calls = %d/%d", directCalls, gatewayCalls)
 	}
+}
+
+func TestPasswordLoginUsesManualCustomGatewayPort(t *testing.T) {
+	loginCalls := 0
+	gateway := newTestFNOSGateway(t, &loginCalls)
+	client := newTestUpstreamClient(t, gateway.URL, nil)
+	incoming := httptest.NewRequest(http.MethodPost, "/", nil)
+	incoming.Header.Set(fnosGatewayHeader, gateway.URL)
+	response, err := client.Do(context.Background(), incoming, Route{ID: "auth.login.password", UpstreamMethod: http.MethodPost}, "/user/password-login", nil, []byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if loginCalls != 1 || response.Header.Get("X-Yinqiao-Upstream") != "fnos-web-gateway" {
+		t.Fatalf("manual gateway login calls=%d marker=%q", loginCalls, response.Header.Get("X-Yinqiao-Upstream"))
+	}
+}
+
+func TestPasswordLoginUsesManualCustomHTTPSGateway(t *testing.T) {
+	loginCalls := 0
+	gateway := httptest.NewTLSServer(testFNOSGatewayHandler(t, &loginCalls))
+	t.Cleanup(gateway.Close)
+	client := newTestUpstreamClient(t, gateway.URL, nil)
+	incoming := httptest.NewRequest(http.MethodPost, "/", nil)
+	incoming.Header.Set(fnosGatewayHeader, gateway.URL)
+	response, err := client.Do(context.Background(), incoming, Route{ID: "auth.login.password", UpstreamMethod: http.MethodPost}, "/user/password-login", nil, []byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if loginCalls != 1 {
+		t.Fatalf("HTTPS gateway login calls=%d", loginCalls)
+	}
+}
+
+func TestPasswordLoginDiscoversCustomizedListeningPort(t *testing.T) {
+	loginCalls := 0
+	gateway := newTestFNOSGateway(t, &loginCalls)
+	parsed, _ := url.Parse(gateway.URL)
+	port, _ := strconv.Atoi(parsed.Port())
+	client := newTestUpstreamClient(t, gateway.URL, nil)
+	client.listeningPorts = func() []int { return []int{port} }
+	response, err := client.Do(context.Background(), httptest.NewRequest(http.MethodPost, "/", nil), Route{ID: "auth.login.password", UpstreamMethod: http.MethodPost}, "/user/password-login", nil, []byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if loginCalls != 1 {
+		t.Fatalf("discovered gateway login calls=%d", loginCalls)
+	}
+}
+
+func TestGatewayDiagnosticsReportsCandidatesAndSelection(t *testing.T) {
+	loginCalls := 0
+	gateway := newTestFNOSGateway(t, &loginCalls)
+	parsed, _ := url.Parse(gateway.URL)
+	port, _ := strconv.Atoi(parsed.Port())
+	client := newTestUpstreamClient(t, gateway.URL, nil)
+	client.listeningPorts = func() []int { return []int{port} }
+	report := client.GatewayDiagnostics(context.Background(), "")
+	if report.SelectedOrigin == "" || len(report.Candidates) != 1 || !report.Candidates[0].Available || !report.Candidates[0].Selected {
+		t.Fatalf("unexpected diagnostics: %#v", report)
+	}
+}
+
+func newTestFNOSGateway(t *testing.T, loginCalls *int) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(testFNOSGatewayHandler(t, loginCalls))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func testFNOSGatewayHandler(t *testing.T, loginCalls *int) http.Handler {
+	t.Helper()
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/music/api/v1/initialization/state":
+			_, _ = io.WriteString(writer, `{"code":0,"data":{"initialized":true}}`)
+		case "/music/api/v1/user/password-login":
+			(*loginCalls)++
+			_, _ = io.WriteString(writer, `{"code":0,"data":{"userToken":"token"}}`)
+		default:
+			http.NotFound(writer, request)
+		}
+	})
 }
 
 func newTestUpstreamClient(t *testing.T, origin string, gateways []string) *UpstreamClient {

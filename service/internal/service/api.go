@@ -12,12 +12,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 )
+
+const fnosGatewayHeader = "X-Yinqiao-Fnos-Gateway"
 
 type apiClient struct {
 	baseURL      string
 	client       *http.Client
 	streamClient *http.Client
+	gatewayMu    sync.RWMutex
+	gateway      string
 }
 
 type apiError struct {
@@ -62,6 +67,12 @@ func (c *apiClient) call(ctx context.Context, method, path, token string, query 
 		return nil, err
 	}
 	request.Header.Set("Accept", "application/json")
+	c.gatewayMu.RLock()
+	gateway := c.gateway
+	c.gatewayMu.RUnlock()
+	if gateway != "" {
+		request.Header.Set(fnosGatewayHeader, gateway)
+	}
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
@@ -98,6 +109,12 @@ func (c *apiClient) call(ctx context.Context, method, path, token string, query 
 	return data, nil
 }
 
+func (c *apiClient) setGatewayOrigin(origin string) {
+	c.gatewayMu.Lock()
+	c.gateway = origin
+	c.gatewayMu.Unlock()
+}
+
 func (c *apiClient) login(ctx context.Context, username, password, deviceID string) (loginResult, error) {
 	// The official fnmusic frontend sends SHA-256 rather than the plaintext
 	// password. Sending the same representation also avoids ambiguity when a
@@ -109,6 +126,16 @@ func (c *apiClient) login(ctx context.Context, username, password, deviceID stri
 		"deviceId": deviceID,
 	})
 	if err != nil {
+		var upstreamErr *apiError
+		if errors.As(err, &upstreamErr) && upstreamErr.Code == "UPSTREAM_120001" {
+			diagnostics, diagnosticErr := c.call(ctx, http.MethodGet, "/gateway/diagnostics", "", nil, nil)
+			if diagnosticErr == nil && stringValue(object(diagnostics), "selectedOrigin") == "" {
+				return loginResult{}, &apiError{
+					Status: http.StatusBadGateway, Code: "FNOS_GATEWAY_NOT_FOUND",
+					Message: "未找到可用的 fnOS Web 网关，请在音桥设置中确认 fnOS 管理端口",
+				}
+			}
+		}
 		return loginResult{}, err
 	}
 	encoded, err := json.Marshal(data)
