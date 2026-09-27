@@ -1,11 +1,16 @@
 #!/bin/bash
 
-API_BIN="${TRIM_APPDEST}/yinqiao-api"
+case "$(uname -m)" in
+    aarch64|arm64) YINQIAO_ARCH="arm64" ;;
+    *) YINQIAO_ARCH="x86_64" ;;
+esac
+
+API_BIN="${TRIM_APPDEST}/yinqiao-api-${YINQIAO_ARCH}"
 API_PID_FILE="${TRIM_PKGVAR}/yinqiao-api.pid"
 API_LOG_FILE="${TRIM_PKGVAR}/log/yinqiao-api.log"
 API_PORT="${YINQIAO_API_PORT:-18090}"
 
-SERVICE_BIN="${TRIM_APPDEST}/yinqiao-service"
+SERVICE_BIN="${TRIM_APPDEST}/yinqiao-service-${YINQIAO_ARCH}"
 SERVICE_PID_FILE="${TRIM_PKGVAR}/yinqiao-service.pid"
 SERVICE_LOG_FILE="${TRIM_PKGVAR}/log/yinqiao-service.log"
 SERVICE_PORT="${YINQIAO_SERVICE_PORT:-14040}"

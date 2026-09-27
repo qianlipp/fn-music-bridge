@@ -18,12 +18,27 @@ mkdir -p "${WORK_DIR}/app" "${WORK_DIR}/package" "${PROJECT_ROOT}/dist"
 cd "${PROJECT_ROOT}/api"
 go test ./...
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' \
-    -o "${WORK_DIR}/app/yinqiao-api" ./cmd/yinqiao-api
+    -o "${WORK_DIR}/app/yinqiao-api-x86_64" ./cmd/yinqiao-api
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags='-s -w' \
+    -o "${WORK_DIR}/app/yinqiao-api-arm64" ./cmd/yinqiao-api
 
 cd "${PROJECT_ROOT}/service"
 go test ./...
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' \
-    -o "${WORK_DIR}/app/yinqiao-service" ./cmd/yinqiao-service
+    -o "${WORK_DIR}/app/yinqiao-service-x86_64" ./cmd/yinqiao-service
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags='-s -w' \
+    -o "${WORK_DIR}/app/yinqiao-service-arm64" ./cmd/yinqiao-service
+
+for binary in "${WORK_DIR}"/app/yinqiao-api-x86_64 "${WORK_DIR}"/app/yinqiao-api-arm64 \
+    "${WORK_DIR}"/app/yinqiao-service-x86_64 "${WORK_DIR}"/app/yinqiao-service-arm64; do
+    if command -v file >/dev/null 2>&1; then
+        case "$(file -b "${binary}")" in
+            *x86-64*) [ "${binary##*-}" = "x86_64" ] || { echo "wrong ELF arch: ${binary}"; exit 1; } ;;
+            *aarch64*|*ARM\ aarch64*) [ "${binary##*-}" = "arm64" ] || { echo "wrong ELF arch: ${binary}"; exit 1; } ;;
+            *) echo "unrecognized ELF arch: ${binary}"; exit 1 ;;
+        esac
+    fi
+done
 
 mkdir -p "${WORK_DIR}/app/ui/images"
 cp "${PROJECT_ROOT}/package-src/app/ui/config" "${WORK_DIR}/app/ui/config"
@@ -39,7 +54,9 @@ cp "${PROJECT_ROOT}/package-src/manifest" "${WORK_DIR}/package/manifest"
 cp -R "${PROJECT_ROOT}/package-src/cmd" "${PROJECT_ROOT}/package-src/config" \
     "${PROJECT_ROOT}/package-src/i18n" "${PROJECT_ROOT}/package-src/wizard" "${WORK_DIR}/package/"
 
-chmod 755 "${WORK_DIR}/app/yinqiao-api" "${WORK_DIR}/app/yinqiao-service" "${WORK_DIR}/package/cmd/"*
+chmod 755 "${WORK_DIR}/app/yinqiao-api-x86_64" "${WORK_DIR}/app/yinqiao-api-arm64" \
+    "${WORK_DIR}/app/yinqiao-service-x86_64" "${WORK_DIR}/app/yinqiao-service-arm64" \
+    "${WORK_DIR}/package/cmd/"*
 chmod -R u+rwX,go+rX "${WORK_DIR}/app" "${WORK_DIR}/package"
 
 COPYFILE_DISABLE=1 tar -czf "${WORK_DIR}/package/app.tgz" -C "${WORK_DIR}/app" .
