@@ -37,6 +37,12 @@ func testAPI(t *testing.T, upstream http.Handler) (*Server, *httptest.Server) {
 
 func TestPasswordLoginAdaptsPasswordAndBearerCookie(t *testing.T) {
 	upstream := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/music/api/v1/initialization/state" {
+			// 网关探测会扫到本机 httptest 监听端口，返回非 2xx 让探测失败，
+			// 登录请求继续走配置的 origin。
+			writer.WriteHeader(http.StatusNotFound)
+			return
+		}
 		if request.URL.Path != "/music/api/v1/user/password-login" {
 			t.Fatalf("unexpected path %s", request.URL.Path)
 		}
