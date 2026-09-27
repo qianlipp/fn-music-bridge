@@ -22,15 +22,44 @@ grep -q "^version=\"${EXPECTED_VERSION}\"$" "${WORK_DIR}/package/manifest"
 grep -q '^source="thirdparty"$' "${WORK_DIR}/package/manifest"
 grep -q '^install_dep_apps="trim.music"$' "${WORK_DIR}/package/manifest"
 grep -q '^install_type="root"$' "${WORK_DIR}/package/manifest"
-grep -q '^platform="x86"$' "${WORK_DIR}/package/manifest"
+grep -q '^platform="all"$' "${WORK_DIR}/package/manifest"
 grep -q '^ctl_stop="true"$' "${WORK_DIR}/package/manifest"
 grep -q '^disable_authorization_path="true"$' "${WORK_DIR}/package/manifest"
 grep -q '^desktop_uidir="ui"$' "${WORK_DIR}/package/manifest"
 grep -q '^desktop_applaunchname="yinqiao.main"$' "${WORK_DIR}/package/manifest"
 grep -q '^service_port="14040"$' "${WORK_DIR}/package/manifest"
-test -x "${WORK_DIR}/app/yinqiao-api"
-test -x "${WORK_DIR}/app/yinqiao-service"
-test "$(find "${WORK_DIR}/app" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')" = "2"
+for binary in yinqiao-api-x86_64 yinqiao-api-arm64 yinqiao-service-x86_64 yinqiao-service-arm64; do
+    test -x "${WORK_DIR}/app/${binary}"
+done
+while IFS= read -r line; do
+    binary="${line%% *}"
+    elf_machine="${line#* }"
+    case "${binary}" in
+        *-x86_64) test "${elf_machine}" = "x86_64" || { echo "wrong ELF arch for ${binary}: ${elf_machine}"; exit 1; } ;;
+        *-arm64) test "${elf_machine}" = "aarch64" || { echo "wrong ELF arch for ${binary}: ${elf_machine}"; exit 1; } ;;
+        *) echo "unexpected binary ${binary}"; exit 1 ;;
+    esac
+done <<EOF
+$(python3 - "${WORK_DIR}/app" <<'PYEOF'
+import os
+import struct
+import sys
+
+machines = {0x3E: "x86_64", 0xB7: "aarch64"}
+app_dir = sys.argv[1]
+for name in sorted(os.listdir(app_dir)):
+    path = os.path.join(app_dir, name)
+    if not os.path.isfile(path) or os.path.islink(path):
+        continue
+    with open(path, "rb") as fh:
+        header = fh.read(20)
+    if header[:4] != b"\x7fELF":
+        continue
+    print(f"{name} {machines[struct.unpack('<H', header[18:20])[0]]}")
+PYEOF
+)
+EOF
+test "$(find "${WORK_DIR}/app" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')" = "4"
 test ! -e "${WORK_DIR}/app/trim-music"
 test ! -e "${WORK_DIR}/app/static"
 test -f "${WORK_DIR}/app/ui/config"
